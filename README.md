@@ -108,7 +108,7 @@ Qualitative comparison from Figure 3 of the MICCAI paper. Blue marks plaque.
 The [package guide](dentalpsam/README.md) maps model, data, training, and evaluation
 modules, including the 3D branch in `dentalpsam/branch3d/`.
 `train.py` and `test.py` are the public commands; both support `--help`.
-Developer checks and recorded environments are separate from this workflow.
+Contributor checks live in `tests/`; they are not additional model entry points.
 
 ## Citation
 

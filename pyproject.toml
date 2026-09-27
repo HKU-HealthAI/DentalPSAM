@@ -30,10 +30,10 @@ Repository = "https://github.com/HKU-HealthAI/DentalPSAM"
 
 [tool.setuptools.packages.find]
 include = ["dentalpsam*"]
-exclude = ["tests*", "dev*"]
+exclude = ["tests*"]
 
 [tool.setuptools.package-data]
-dentalpsam = ["README.md", "segment_anything/README.md", "segment_anything/LICENSE"]
+dentalpsam = ["README.md", "branch3d/README.md", "segment_anything/README.md", "segment_anything/LICENSE"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

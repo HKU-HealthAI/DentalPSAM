@@ -1,4 +1,4 @@
-"""Check wheel contents without installing any development utilities."""
+"""Check that the wheel contains only the public package and its documentation."""
 
 import argparse
 from pathlib import Path
@@ -22,6 +22,7 @@ def main():
     if unexpected:
         raise ValueError(f"Non-package files included in wheel: {unexpected}")
     assert "dentalpsam/branch3d/model.py" in files
+    assert "dentalpsam/branch3d/README.md" in files
     assert "dentalpsam/README.md" in files
     assert "dentalpsam/segment_anything/LICENSE" in files
     print("PASS: wheel installs only dentalpsam and its distribution metadata")

@@ -15,4 +15,5 @@ jobs:
       - run: pytest -q
       - run: bash tests/run_checks.sh
       - run: python -m pip wheel --no-deps --no-build-isolation . --wheel-dir /tmp/dentalpsam-wheel
-      - run: python dev/check_distribution.py --wheel-dir /tmp/dentalpsam-wheel
+      - run: python tests/check_distribution.py --wheel-dir /tmp/dentalpsam-wheel
+      - run: python tests/check_git_payload.py

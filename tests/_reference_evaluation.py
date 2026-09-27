@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Evaluate saved plaque predictions with face, area, and vertex units.
+"""Reference evaluator retained only for face/area/vertex regression tests.
 
 Ground truth is the existing binary ``label_mesh`` face label.  For each case,
 the three UV views must form a disjoint triangle partition.  The script rejects

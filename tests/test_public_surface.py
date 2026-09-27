@@ -11,7 +11,7 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 def test_single_public_package_and_no_unused_config():
-    for name in ("tsgcnet", "scripts", "tools", "configs"):
+    for name in ("tsgcnet", "scripts", "tools", "configs", "dev"):
         assert not (ROOT / name).is_dir() or not any((ROOT / name).iterdir())
     for path in (ROOT / "dentalpsam").rglob("*.py"):
         for node in ast.walk(ast.parse(path.read_text())):

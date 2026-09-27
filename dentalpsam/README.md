@@ -31,7 +31,7 @@ after predictions are restored to the original faces—not inside the BMT.
 | DentalPSAM's 2D branch, geometric prompts, and 3D decoder | [model.py](model.py) |
 | Aligned image, annotation, and mesh-patch loading | [data.py](data.py) |
 | Rendering upper, inner, and outer views | [preparation.py](preparation.py) and [uv_projection.py](uv_projection.py) |
-| 3D branch model, mesh loader, and training | [branch3d/model.py](branch3d/model.py), [data.py](branch3d/data.py), [training.py](branch3d/training.py) |
+| 3D branch model, mesh loader, and training | [3D branch guide](branch3d/README.md) |
 | Frozen 3D features and their patch correspondence | [branch3d/features.py](branch3d/features.py) |
 | Joint DentalPSAM training and validation | [training.py](training.py), [validation.py](validation.py) |
 | Model construction and strict checkpoint loading | [checkpoints.py](checkpoints.py) |
@@ -73,7 +73,7 @@ arrays. See [Dataset](../docs/DATASET.md) for the complete file contract.
   It is not physical-area weighting.
 
 The vendored [SAM implementation](segment_anything/README.md) stays in place
-for checkpoint compatibility and retains its own license. Developer utilities
+for checkpoint compatibility and retains its own license. Regression tests
 are outside the installed package.
 
 ## Weights and environment

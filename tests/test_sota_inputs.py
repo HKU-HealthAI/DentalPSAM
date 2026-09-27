@@ -9,8 +9,45 @@ import numpy as np
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from tests.test_evaluate_mesh import object_parts, write_binary_ply
-from dev.audit_sota_inputs import read_cached_scores
-from dev.evaluate_mesh import read_ply_mesh
+from dentalpsam.mesh_io import read_ply_mesh, view_to_mesh_face_indices
+
+
+def read_cached_scores(data_dir, mesh_id):
+    """Reference restoration used to test cached patch-to-face correspondence."""
+    xyz, _colours, faces = read_ply_mesh(data_dir / "origin" / f"{mesh_id}.ply")
+    joined_faces, joined_scores = [], []
+    with np.load(
+        data_dir / "manual_2D/SOTA_mesh" / f"{mesh_id}.npz", allow_pickle=True
+    ) as cache, np.load(data_dir / "manual_2D/info" / f"{mesh_id}.npz") as info:
+        for view in ("up", "in", "out"):
+            rows = np.asarray(
+                [row for part in cache[view] for row in part], dtype=np.float64
+            ).reshape(-1, 10)
+            order = np.asarray(
+                [index for part in cache[f"face_order_{view}"] for index in part],
+                dtype=int,
+            )
+            tri = np.asarray(info[f"tri_{view}"], dtype=int)
+            if len(rows) != len(tri) or sorted(order.tolist()) != list(range(len(tri))):
+                raise ValueError(f"Invalid cache face permutation: {mesh_id}/{view}")
+            if not np.allclose(
+                rows[:, :9], xyz[tri[order]].reshape(-1, 9), rtol=0, atol=1e-6
+            ):
+                raise ValueError(
+                    f"Cached geometry does not match original PLY: {mesh_id}/{view}"
+                )
+            scores = np.empty(len(order), dtype=np.float64)
+            scores[order] = rows[:, 9]
+            if not np.isfinite(scores).all() or np.any((scores < 0) | (scores > 1)):
+                raise ValueError(f"Invalid cached score range: {mesh_id}/{view}")
+            joined_faces.append(tri)
+            joined_scores.append(scores)
+    mapping = view_to_mesh_face_indices(np.concatenate(joined_faces), faces)
+    if len(set(mapping.tolist())) != len(faces):
+        raise ValueError(f"Duplicate original face mapping: {mesh_id}")
+    scores = np.empty(len(faces), dtype=np.float64)
+    scores[mapping] = np.concatenate(joined_scores)
+    return scores, faces
 
 
 def main():

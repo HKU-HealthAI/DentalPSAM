@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Dependency-free functional test for ``dev/preflight_split.py``."""
+"""Dependency-free functional test for the prepared-input preflight library."""
 
 from __future__ import annotations
 
