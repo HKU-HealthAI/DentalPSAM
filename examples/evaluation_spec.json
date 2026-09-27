@@ -1,0 +1,13 @@
+[
+  {
+    "name": "DentalPSAM",
+    "type": "fusion",
+    "path": "outputs/dentalpsam_predictions/3Dpred",
+    "png_path": "outputs/dentalpsam_predictions",
+    "fusion_weight_2d": 0.5,
+    "fusion_binarize_2d": false,
+    "threshold": 0.5,
+    "positive_rule": "strict_greater",
+    "score_transform": "identity"
+  }
+]
