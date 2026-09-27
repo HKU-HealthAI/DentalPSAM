@@ -111,6 +111,22 @@ def object_array(parts: list[np.ndarray]) -> np.ndarray:
     return result
 
 
+def original_face_scores(
+    padded_faces: np.ndarray, probabilities: np.ndarray, original_faces: np.ndarray,
+) -> np.ndarray:
+    """Apply the source exporter's face-key lookup without adding padded faces.
+
+    A short mesh repeats its final face. The historical dict(zip(...)) keeps
+    the last score for that key, which can differ from the first occurrence.
+    Preserve this export behavior even though standalone evaluation excludes
+    repeated rows directly. Ground-truth targets never use this lookup.
+    """
+    if len(padded_faces) != len(probabilities):
+        raise ValueError("Face indices and probabilities must have equal length")
+    lookup = dict(zip(map(tuple, padded_faces), probabilities))
+    return np.asarray([lookup[tuple(face)] for face in original_faces], dtype=np.float64)
+
+
 def patch_rows(
     view: str,
     triangles: np.ndarray,
@@ -273,7 +289,9 @@ def export_features(args) -> None:
             # Match the source exporter's softmax conversion exactly, including
             # floating-point rounding; the model itself returns log-probability.
             probabilities = torch.softmax(log_probability.contiguous().view(-1, 2), dim=1)
-            face_scores = probabilities[:raw_count, 1].cpu().numpy().astype(np.float64)
+            face_scores = original_face_scores(
+                index_face, probabilities[:, 1].cpu().numpy(), faces,
+            )
             if not np.all(np.isfinite(face_scores)) or np.any((face_scores < 0) | (face_scores > 1)):
                 raise ValueError(f"Invalid model probability: {mesh_id}")
             score_path = args.out_dir / "scores" / f"{mesh_id}.npy"
@@ -342,6 +360,7 @@ def export_features(args) -> None:
         "ground_truth_encoding": "1 - min(vertex annotation RGB / 255, per channel)[0]; continuous BCE target",
         "prediction_encoding": "softmax(model log-probabilities, dim=class)[:, 1]; P(plaque)",
         "patch_assignment": "source upper-only UV clipping with Python negative indexing",
+        "padding_score_lookup": "original face tuples; last occurrence wins for repeated padding",
         "verification": "both NPZ files reopened; geometry, permutation and all scores/targets checked",
         "device": str(device),
         "k": args.k,

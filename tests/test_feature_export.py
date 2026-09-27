@@ -9,8 +9,21 @@ import numpy as np
 import pytest
 
 from dentalpsam.branch3d.features import (
-    VIEWS, patch_rows, rasterize, verify_patch_file,
+    VIEWS, original_face_scores, patch_rows, rasterize, verify_patch_file,
 )
+
+
+def test_repeated_padding_uses_source_last_occurrence_without_extra_faces():
+    faces = np.array([[0, 1, 2], [2, 3, 4]])
+    padded = np.vstack([faces, faces[-1]])
+    probability = np.array([.1, .2, .3], dtype=np.float32)
+    actual = original_face_scores(padded, probability, faces)
+    expected = dict(zip(map(tuple, padded), probability))
+    np.testing.assert_array_equal(actual, [expected[tuple(face)] for face in faces])
+    assert actual.shape == (2,)
+    assert actual[1] == probability[-1]
+    with pytest.raises(ValueError, match="equal length"):
+        original_face_scores(padded, probability[:-1], faces)
 
 
 @pytest.mark.parametrize("view, centres, expected", [

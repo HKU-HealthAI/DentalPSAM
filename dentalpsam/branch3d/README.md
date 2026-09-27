@@ -132,6 +132,12 @@ Predictions use the source exporter's class-1 softmax conversion in evaluation
 mode; ground-truth targets never pass through the model. Do not populate both
 NPZ files from the same prediction array.
 
+The source exporter looks scores up by triangle vertices. For a repeated
+padding face, the last occurrence supplies that original face's score; it
+does not create an additional exported triangle. This differs subtly from
+simply slicing the first `original_face_count` network outputs. The export
+retains this convention, while the standalone test metric excludes padding.
+
 The auxiliary scores generated here are **not** DentalPSAM's final 3D output.
 DentalPSAM's [MeshDecoder](../model.py) also uses 2D appearance features and
 produces its own mesh logits. The final evaluator fuses those predictions
