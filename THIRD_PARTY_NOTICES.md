@@ -2,8 +2,8 @@
 
 This source snapshot includes a modified copy of Meta's Segment Anything
 implementation under `dentalpsam/segment_anything/`. Those files retain their
-upstream copyright headers. The Apache License 2.0 text is included at
-`LICENSES/Apache-2.0.txt`.
+upstream copyright headers. The Apache License 2.0 text is included alongside
+the vendored code at [its original license](dentalpsam/segment_anything/LICENSE).
 
 `dentalpsam/model.py` contains model components derived from Segment Anything
 and an MLP structure described in the historical source as adapted from

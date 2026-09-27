@@ -51,7 +51,7 @@ The `w/o Stitch` ablation row reports plaque IoU **.547**, plaque Dice **.700**,
 and OA **.830**. This is the reference target for the present package. Do not
 claim that a no-stitching run reproduces the full model's .556/.712 row.
 
-The default evaluator is `scripts/dentalpsam/evaluate.py`: equal triangle weights,
+The public `test.py` command calls `dentalpsam/evaluation.py`: equal triangle weights,
 strict `> 0.5`, UV truncation, fixed 0.5/0.5 fusion, and mesh-macro averaging.
 Compatibility with the inspected server evaluator and reproduction of a
 paper target are two separate acceptance conditions.

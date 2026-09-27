@@ -33,7 +33,7 @@ include = ["dentalpsam*"]
 exclude = ["tests*", "dev*", "reproducibility*"]
 
 [tool.setuptools.package-data]
-dentalpsam = ["segment_anything/README.md"]
+dentalpsam = ["README.md", "segment_anything/README.md", "segment_anything/LICENSE"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

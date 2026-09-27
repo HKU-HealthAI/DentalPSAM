@@ -6,6 +6,8 @@ __pycache__/
 *.pt
 *.npz
 *.png
+!assets/method.png
+!assets/comparison.png
 *.jpg
 *.jpeg
 *.ply

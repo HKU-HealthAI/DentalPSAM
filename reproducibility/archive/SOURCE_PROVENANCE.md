@@ -8,6 +8,32 @@ The public tree was prepared from read-only snapshots on `research23` on
 2026-09-27. Private absolute paths were removed from executable entry points.
 The following SHA-256 values bind the upstream files that were inspected.
 
+## MICCAI figures and README results
+
+The README uses the author-supplied `MICCAI2026_DentalPSAM (1).zip` archive,
+not the CVPR archive or clinical tables. Its `Paper-4344.pdf` (pages 2 and 7)
+and `LatexSource-4344/sec/experiment.tex` were checked together. README metric
+values are a transcription of active Table 1, not the commented-out earlier
+table. They are paper reports, not evidence of a successful current replay.
+
+Only the two paper illustrations are distributed, not the paper archive,
+publication agreement, patient scans, annotations, or cohort identifiers.
+The PNGs are direct single-page renders of the original figure PDFs; no
+predictions, labels, or figure content were edited.
+
+| Artifact | SHA-256 |
+| --- | --- |
+| Supplied MICCAI archive | `56895e49bd2a09c9626fa5810ef19060f7f9af184b527c33b19ff3e87095d6f5` |
+| `Paper-4344.pdf` | `786581e4629d0f1e530444aca62da479c2821bbf7b4f3e21c1d6aa420c07596e` |
+| `images/pipe_dentalpsam.pdf` | `2015f334fd7f329876f7c2bd02a3d991156fe31b48ee487a6272989fab14ace8` |
+| `images/experiments_visuliazation.pdf` | `d2331b6e93466464e7e11851f57221349e82829d6f05a17687c241fa5ab5ed79` |
+| `assets/method.png` | `24b1172b7c87765888f49e1e06d5b30714d77391b33fad4fdf420f73e0ea19cc` |
+| `assets/comparison.png` | `3e83d8c58994babf8099b4e230ba28b3480661f822c51145a795d906ea751083` |
+
+Rendering used `pdftoppm -singlefile -png -scale-to 1800` for the architecture
+and `-scale-to 2000` for the comparison. Figures retain their paper labels;
+the comparison baseline names are not additional public workflow commands.
+
 ## DentalPSAM server source
 
 | Upstream file | SHA-256 |
