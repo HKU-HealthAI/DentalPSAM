@@ -6,10 +6,18 @@
 import numpy as np
 import random
 
+
 class DataAugmentation:
     """数据增强类"""
 
-    def __init__(self, enable_flip=True, flip_prob=0.5, enable_rotation=False, rotation_range=(-10, 10), seed=None):
+    def __init__(
+        self,
+        enable_flip=True,
+        flip_prob=0.5,
+        enable_rotation=False,
+        rotation_range=(-10, 10),
+        seed=None,
+    ):
         """
         初始化数据增强
 
@@ -84,11 +92,9 @@ class DataAugmentation:
         # Z轴旋转矩阵
         cos_theta = np.cos(theta)
         sin_theta = np.sin(theta)
-        rot_matrix = np.array([
-            [cos_theta, -sin_theta, 0],
-            [sin_theta, cos_theta, 0],
-            [0, 0, 1]
-        ])
+        rot_matrix = np.array(
+            [[cos_theta, -sin_theta, 0], [sin_theta, cos_theta, 0], [0, 0, 1]]
+        )
 
         points_face_rotated = points_face.copy()
 
@@ -144,11 +150,12 @@ class DataAugmentation:
             配置信息字典
         """
         return {
-            'enable_flip': self.enable_flip,
-            'flip_prob': self.flip_prob,
-            'enable_rotation': self.enable_rotation,
-            'rotation_range': self.rotation_range
+            "enable_flip": self.enable_flip,
+            "flip_prob": self.flip_prob,
+            "enable_rotation": self.enable_rotation,
+            "rotation_range": self.rotation_range,
         }
+
 
 def test_augmentation():
     """
@@ -157,26 +164,52 @@ def test_augmentation():
     print("测试数据增强功能...")
 
     # 创建测试数据
-    test_points = np.array([
-        [1.0, 2.0, 3.0,   # 顶点1
-         4.0, 5.0, 6.0,   # 顶点2
-         7.0, 8.0, 9.0,   # 顶点3
-         5.0, 5.0, 5.0,   # 中心点
-         0.1, 0.2, 0.3,   # 法向量1
-         0.4, 0.5, 0.6,   # 法向量2
-         0.7, 0.8, 0.9,   # 法向量3
-         0.5, 0.5, 0.5,   # RGB
-         0.5, 0.5, 0.5,   # 顶点1颜色
-         0.5, 0.5, 0.5,   # 顶点2颜色
-         0.5, 0.5, 0.5]   # 顶点3颜色
-    ])
+    test_points = np.array(
+        [
+            [
+                1.0,
+                2.0,
+                3.0,  # 顶点1
+                4.0,
+                5.0,
+                6.0,  # 顶点2
+                7.0,
+                8.0,
+                9.0,  # 顶点3
+                5.0,
+                5.0,
+                5.0,  # 中心点
+                0.1,
+                0.2,
+                0.3,  # 法向量1
+                0.4,
+                0.5,
+                0.6,  # 法向量2
+                0.7,
+                0.8,
+                0.9,  # 法向量3
+                0.5,
+                0.5,
+                0.5,  # RGB
+                0.5,
+                0.5,
+                0.5,  # 顶点1颜色
+                0.5,
+                0.5,
+                0.5,  # 顶点2颜色
+                0.5,
+                0.5,
+                0.5,
+            ]  # 顶点3颜色
+        ]
+    )
 
     # 创建数据增强器
     augmenter = DataAugmentation(
         enable_flip=True,
         flip_prob=1.0,  # 100%翻转用于测试
         enable_rotation=True,
-        rotation_range=(-15, 15)
+        rotation_range=(-15, 15),
     )
 
     print("原始数据:")
@@ -202,9 +235,12 @@ def test_augmentation():
     # 验证翻转效果
     expected_y = -test_points[0, 1]
     actual_y = flipped_points[0, 1]
-    print(f"\n翻转验证: 期望 {expected_y:.3f}, 实际 {actual_y:.3f}, 匹配: {abs(expected_y - actual_y) < 1e-6}")
+    print(
+        f"\n翻转验证: 期望 {expected_y:.3f}, 实际 {actual_y:.3f}, 匹配: {abs(expected_y - actual_y) < 1e-6}"
+    )
 
     print("数据增强功能测试完成！")
+
 
 if __name__ == "__main__":
     test_augmentation()

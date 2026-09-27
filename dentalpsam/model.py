@@ -98,17 +98,17 @@ class DentalPSAM(nn.Module):
         )
 
         outputs = {
-            'pred_masks': low_res_masks,
-            'iou_predictions': iou_predictions,
-            'low_res_logits': None,
-            'pred_mesh': mesh_pred,
+            "pred_masks": low_res_masks,
+            "iou_predictions": iou_predictions,
+            "low_res_logits": None,
+            "pred_mesh": mesh_pred,
         }
 
         if return_intermediate:
             intermediate_features = {
-                'mesh_embeddings': mesh_embeddings,  # [B, num_mesh_point, 256]
-                'dense_mask': dense_mask,            # [B, 256, 64, 64]
-                'image_embeddings': image_embeddings,  # [B, 256, 64, 64]
+                "mesh_embeddings": mesh_embeddings,  # [B, num_mesh_point, 256]
+                "dense_mask": dense_mask,  # [B, 256, 64, 64]
+                "image_embeddings": image_embeddings,  # [B, 256, 64, 64]
             }
             return outputs, intermediate_features
 
@@ -207,7 +207,9 @@ class MeshDecoder(nn.Module):
         self.transformer_dim = 256
 
         self.upscaling = nn.Sequential(
-            nn.Conv2d(self.transformer_dim, self.transformer_dim // 4, kernel_size=2, stride=2),
+            nn.Conv2d(
+                self.transformer_dim, self.transformer_dim // 4, kernel_size=2, stride=2
+            ),
             LayerNorm2d(self.transformer_dim // 4),
             nn.GELU(),
             nn.Conv2d(self.transformer_dim // 4, 1, kernel_size=2, stride=2),
@@ -237,7 +239,9 @@ class MeshDecoder(nn.Module):
         # checkpoint compatibility while making the data-flow role explicit.
         mesh_auxiliary_score = mesh_embeddings[:, :, 9:]
         if self.fusion == "concat":
-            mesh_features = self.mlp_fusion(torch.cat([mesh_pos, mesh_auxiliary_score], dim=-1))
+            mesh_features = self.mlp_fusion(
+                torch.cat([mesh_pos, mesh_auxiliary_score], dim=-1)
+            )
         else:
             expanded_auxiliary_score = torch.repeat_interleave(
                 mesh_auxiliary_score, mesh_pos.shape[2], dim=2
@@ -286,10 +290,14 @@ class MaskDecoder(nn.Module):
         self.mask_tokens = nn.Embedding(self.num_mask_tokens, transformer_dim)
 
         self.output_upscaling = nn.Sequential(
-            nn.ConvTranspose2d(transformer_dim, transformer_dim // 4, kernel_size=2, stride=2),
+            nn.ConvTranspose2d(
+                transformer_dim, transformer_dim // 4, kernel_size=2, stride=2
+            ),
             LayerNorm2d(transformer_dim // 4),
             activation(),
-            nn.ConvTranspose2d(transformer_dim // 4, transformer_dim // 8, kernel_size=2, stride=2),
+            nn.ConvTranspose2d(
+                transformer_dim // 4, transformer_dim // 8, kernel_size=2, stride=2
+            ),
             activation(),
         )
         self.output_hypernetworks_mlps = nn.ModuleList(
@@ -313,7 +321,6 @@ class MaskDecoder(nn.Module):
         image_pe: torch.Tensor,
         dense_prompt_embeddings: torch.Tensor,
         sparse_prompt_embeddings: torch.Tensor,
-
     ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         """
         Predict masks given image and prompt embeddings.
@@ -347,8 +354,12 @@ class MaskDecoder(nn.Module):
         dense_prompt_embeddings: torch.Tensor,
     ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         """Predicts masks. See 'forward' for more details."""
-        output_tokens = torch.cat([self.iou_token.weight, self.mask_tokens.weight], dim=0)
-        output_tokens = output_tokens.unsqueeze(0).expand(sparse_prompt_embeddings.size(0), -1, -1)
+        output_tokens = torch.cat(
+            [self.iou_token.weight, self.mask_tokens.weight], dim=0
+        )
+        output_tokens = output_tokens.unsqueeze(0).expand(
+            sparse_prompt_embeddings.size(0), -1, -1
+        )
         tokens = torch.cat((output_tokens, sparse_prompt_embeddings), dim=1)
         src = image_embeddings + dense_prompt_embeddings
 
@@ -365,7 +376,9 @@ class MaskDecoder(nn.Module):
         upscaled_embedding = self.output_upscaling(src)
         hyper_in_list: List[torch.Tensor] = []
         for i in range(self.num_mask_tokens):
-            hyper_in_list.append(self.output_hypernetworks_mlps[i](mask_tokens_out[:, i, :]))
+            hyper_in_list.append(
+                self.output_hypernetworks_mlps[i](mask_tokens_out[:, i, :])
+            )
 
         hyper_in = torch.stack(hyper_in_list, dim=1)  # [b, c, token_num]
 
@@ -434,14 +447,16 @@ class Embeddings(nn.Module):
 
         self.num_point_embeddings: int = 4  # pos/neg point + 2 box corners
         point_embeddings = [
-            nn.Embedding(1, embed_dim)
-            for _ in range(self.num_point_embeddings)
+            nn.Embedding(1, embed_dim) for _ in range(self.num_point_embeddings)
         ]
         self.point_embeddings = nn.ModuleList(point_embeddings)
 
         self.not_a_point_embed = nn.Embedding(1, embed_dim)
 
-        self.mask_input_size = (4 * image_embedding_size[0], 4 * image_embedding_size[1])
+        self.mask_input_size = (
+            4 * image_embedding_size[0],
+            4 * image_embedding_size[1],
+        )
         self.mask_downscaling = nn.Sequential(
             nn.Conv2d(1, mask_in_chans // 4, kernel_size=2, stride=2),
             LayerNorm2d(mask_in_chans // 4),
@@ -512,7 +527,9 @@ class Embeddings(nn.Module):
             dense_embeddings = self.no_mask_embed.weight.reshape(1, -1, 1, 1).expand(
                 bs, -1, self.image_embedding_size[0], self.image_embedding_size[1]
             )
-        sparse_embeddings = torch.empty((bs, 0, self.embed_dim), device=self._get_device())
+        sparse_embeddings = torch.empty(
+            (bs, 0, self.embed_dim), device=self._get_device()
+        )
         return sparse_embeddings, dense_embeddings
 
 

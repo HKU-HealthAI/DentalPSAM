@@ -46,7 +46,9 @@ def sha256_file(path: Path) -> str:
 def write_json(path: Path, payload: dict) -> None:
     """Write a small JSON record atomically."""
     temporary = path.with_suffix(path.suffix + ".tmp")
-    temporary.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    temporary.write_text(
+        json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8"
+    )
     temporary.replace(path)
 
 
@@ -77,7 +79,10 @@ def binary_iou_dice(prediction: np.ndarray, target: np.ndarray) -> tuple[float, 
 
 def write_probability_png(path: Path, probabilities: np.ndarray) -> None:
     """Write a [0, 1] probability raster as an 8-bit compatibility PNG."""
-    image = np.clip(probabilities * 255.0, 0, 255).astype(np.uint8)
+    # Native cv2.imwrite received float32 probabilities * 255 and rounded
+    # during uint8 conversion. astype(uint8) truncates and changes fusion near
+    # the threshold; convertScaleAbs preserves the native rounding for [0,255].
+    image = cv2.convertScaleAbs(np.clip(probabilities * 255.0, 0, 255))
     if not cv2.imwrite(str(path), image):
         raise OSError(f"Failed to write probability PNG: {path}")
 
@@ -102,7 +107,9 @@ def predict_mesh(
         )
 
     face_orders = dict(zip(("up", "in", "out"), load_face_orders(data_dir, mesh_id)))
-    dataloader = make_dataloader(SAMDataset(images, masks, sota_mesh, label_mesh), num_workers)
+    dataloader = make_dataloader(
+        SAMDataset(images, masks, sota_mesh, label_mesh), num_workers
+    )
 
     mask_patches = np.empty((22, 256, 256), dtype=np.float32)
     face_score_patches: list[np.ndarray] = []
@@ -122,22 +129,36 @@ def predict_mesh(
             valid_faces = valid_mesh_point_mask(face_labels)
             target = binary_mesh_targets(face_labels, target_threshold)
 
-            valid_scores = face_probabilities[valid_faces].detach().cpu().numpy().reshape(-1)
+            valid_scores = (
+                face_probabilities[valid_faces].detach().cpu().numpy().reshape(-1)
+            )
             valid_targets = target[valid_faces].detach().cpu().numpy().reshape(-1)
             face_score_patches.append(valid_scores)
             mesh_scores.append(valid_scores)
             mesh_targets.append(valid_targets)
 
             mask_probabilities = (
-                torch.sigmoid(outputs["pred_masks"].squeeze(1)).detach().cpu().numpy().squeeze()
+                torch.sigmoid(outputs["pred_masks"].squeeze(1))
+                .detach()
+                .cpu()
+                .numpy()
+                .squeeze()
             )
             mask_patches[patch_indices[patch_number]] = mask_probabilities
             image_scores.append(mask_probabilities.reshape(-1))
             image_targets.append(
-                (batch["ground_truth_mask"].cpu().numpy().squeeze() >= target_threshold).reshape(-1)
+                (
+                    batch["ground_truth_mask"].cpu().numpy().squeeze()
+                    >= target_threshold
+                ).reshape(-1)
             )
 
-    for view_index, (view_name, patch_slice, patch_shape, image_shape) in VIEW_SLICES.items():
+    for view_index, (
+        view_name,
+        patch_slice,
+        patch_shape,
+        image_shape,
+    ) in VIEW_SLICES.items():
         restored = restore_face_order(
             np.concatenate(face_score_patches[patch_slice]), face_orders[view_name]
         )
@@ -253,29 +274,37 @@ def main() -> None:
             rendered = ", ".join(f"{key}={value:.4f}" for key, value in metrics.items())
             print(f"[{index}/{len(mesh_ids)}] {mesh_id}: {rendered}", flush=True)
     except Exception as error:
-        manifest.update({
-            "status": "failed",
-            "error_type": type(error).__name__,
-            "error_message": str(error),
-        })
+        manifest.update(
+            {
+                "status": "failed",
+                "error_type": type(error).__name__,
+                "error_message": str(error),
+            }
+        )
         write_json(manifest_path, manifest)
         raise
 
     metric_names = ("mesh_iou", "mesh_dice", "image_iou", "image_dice")
     diagnostic_means = {
-        metric: float(np.nanmean([row[metric] for row in results])) for metric in metric_names
+        metric: float(np.nanmean([row[metric] for row in results]))
+        for metric in metric_names
     }
-    manifest.update({
-        "status": "completed",
-        "processed_mesh_count": len(results),
-        "diagnostic_mesh_macro_means": diagnostic_means,
-        "reported_result_boundary": (
-            "Diagnostics above are not the participant-level reported result; "
-            "run tools/evaluate_mesh.py on the saved probabilities."
-        ),
-    })
+    manifest.update(
+        {
+            "status": "completed",
+            "processed_mesh_count": len(results),
+            "diagnostic_mesh_macro_means": diagnostic_means,
+            "reported_result_boundary": (
+                "Diagnostics above are not the participant-level reported result; "
+                "run tools/evaluate_mesh.py on the saved probabilities."
+            ),
+        }
+    )
     write_json(manifest_path, manifest)
-    write_json(output_dir / "prediction_summary.json", {"per_mesh": results, **diagnostic_means})
+    write_json(
+        output_dir / "prediction_summary.json",
+        {"per_mesh": results, **diagnostic_means},
+    )
     print(json.dumps(diagnostic_means, sort_keys=True), flush=True)
 
 

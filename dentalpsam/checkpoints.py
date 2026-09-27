@@ -46,7 +46,11 @@ def load_dentalpsam(
     # buffers belong to SAM, so move SAM before constructing DentalPSAM.
     checkpoint = torch.load(dentalpsam_checkpoint, map_location="cpu")
     state = extract_model_state(checkpoint)
-    fusion = "concat" if any(key.startswith("mesh_decoder.mlp_fusion.") for key in state) else "gated"
+    fusion = (
+        "concat"
+        if any(key.startswith("mesh_decoder.mlp_fusion.") for key in state)
+        else "gated"
+    )
     sam = build_sam_vit_b(sam_checkpoint).to(device)
     model = DentalPSAM(sam, mesh_fusion=fusion).to(device)
     # Never ignore missing/unexpected keys or initialize a missing fusion head.

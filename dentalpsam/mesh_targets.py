@@ -43,7 +43,9 @@ def soft_mesh_targets(label_mesh: torch.Tensor) -> torch.Tensor:
     return label_mesh[..., TARGET_CHANNEL_INDEX : TARGET_CHANNEL_INDEX + 1]
 
 
-def binary_mesh_targets(label_mesh: torch.Tensor, target_threshold: float) -> torch.Tensor:
+def binary_mesh_targets(
+    label_mesh: torch.Tensor, target_threshold: float
+) -> torch.Tensor:
     """Threshold continuous channel-9 targets for diagnostic IoU/Dice only."""
     if not 0.0 <= target_threshold <= 1.0:
         raise ValueError("target_threshold must be in [0, 1].")
@@ -101,5 +103,9 @@ def binary_mesh_iou(
     epsilon: float = 1e-5,
 ) -> torch.Tensor:
     """Return binary IoU on valid mesh rows, with an explicit empty-union guard."""
-    intersection, union = binary_mesh_intersection_union(predictions, targets, valid_mask)
-    return intersection.to(dtype=torch.float32) / (union.to(dtype=torch.float32) + epsilon)
+    intersection, union = binary_mesh_intersection_union(
+        predictions, targets, valid_mask
+    )
+    return intersection.to(dtype=torch.float32) / (
+        union.to(dtype=torch.float32) + epsilon
+    )

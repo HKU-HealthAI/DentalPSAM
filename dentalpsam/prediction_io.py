@@ -94,4 +94,6 @@ def mesh_names_from_origin(test_dir: PathLike) -> list[str]:
     """Resolve mesh ids from origin PNG view files."""
     origin_dir = Path(test_dir) / "origin"
     origin_files = sorted(path.stem for path in origin_dir.glob("*.png"))
-    return sorted({name.rsplit("_", 1)[0] if "_" in name else name for name in origin_files})
+    return sorted(
+        {name.rsplit("_", 1)[0] if "_" in name else name for name in origin_files}
+    )
