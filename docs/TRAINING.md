@@ -58,5 +58,5 @@ PyTorch versions or GPUs is not promised.
 
 These are the retained validation-only trainers, not a claim of exact historical
 training replay. Cleanup does not modify losses, selection rules, normalization,
-or the paper evaluator to improve scores. Detailed environment and compatibility
-records are kept separately in [reproducibility](../reproducibility/REPRODUCIBILITY.md).
+or the paper evaluator to improve scores. See the [package guide](../dentalpsam/README.md)
+for model contracts and the tested environment.

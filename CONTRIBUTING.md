@@ -19,8 +19,8 @@ traceable. Source organization does not by itself establish paper reproduction.
    explicitly reviewed directories rather than the entire workspace.
 5. Push coherent milestones to `main` and verify the remote commit. State which
    checks passed for that exact revision and which remain pending; pushing a
-   candidate does not accept it. Follow [Repository acceptance](reproducibility/ACCEPTANCE.md)
-   independently of paper-result reproduction. A formal release tag additionally
+   candidate does not accept it. Check repository usability independently of
+   paper-result reproduction. A formal release tag additionally
    requires author decisions on licensing and data/checkpoint availability.
 
 Use repository-local Git identity and configuration. Credentials belong in
@@ -29,8 +29,8 @@ commands, logs, or commits. Never commit passwords or personal access tokens.
 
 ## What belongs in Git
 
-Commit source, unit tests, documentation,
-and compact aggregate verification reports. Do not commit patient data, mesh
+Commit source, unit tests, documentation, and paper figures. Keep experiment
+audits and verification reports outside the public repository. Do not commit patient data, mesh
 lists containing participant identifiers, checkpoints, saved predictions,
 environments, credentials, or per-patient results. Store those in a separate
 access-controlled experiment directory. `.gitignore` is a safeguard, not a

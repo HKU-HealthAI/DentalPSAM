@@ -8,6 +8,7 @@ __pycache__/
 *.png
 !assets/method.png
 !assets/comparison.png
+!assets/bmt.png
 *.jpg
 *.jpeg
 *.ply
@@ -33,6 +34,7 @@ Raw/
 derived/
 artifacts/
 local_evidence/
+reproducibility/
 outputs/
 checkpoints/
 results/

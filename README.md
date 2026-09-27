@@ -86,7 +86,7 @@ OA denotes overall accuracy. Higher is better for every metric.
 | H-SAM | 0.472 | 0.700 | 0.586 | 0.635 | 0.819 | 0.727 | 0.772 |
 | CrossTooth | 0.480 | 0.746 | 0.613 | 0.645 | 0.851 | 0.748 | 0.801 |
 | Fine-tuned SAM3 | 0.513 | 0.693 | 0.603 | 0.673 | 0.814 | 0.744 | 0.777 |
-| **DentalPSAM (full)** | **0.556** | **0.777** | **0.667** | **0.712** | **0.872** | **0.792** | **0.831** |
+| **DentalPSAM** | **0.556** | **0.777** | **0.667** | **0.712** | **0.872** | **0.792** | **0.831** |
 
 ![Qualitative comparison from Figure 3 of the MICCAI paper](assets/comparison.png)
 
@@ -98,7 +98,6 @@ The [package guide](dentalpsam/README.md) maps model, data, training, and evalua
 modules, including the 3D branch in `dentalpsam/branch3d/`.
 `train.py` and `test.py` are the public commands; both support `--help`.
 Developer checks and recorded environments are separate from this workflow.
-See [reproducibility](reproducibility/REPRODUCIBILITY.md) for evaluation details.
 
 ## Citation
 

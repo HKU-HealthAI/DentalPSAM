@@ -10,8 +10,9 @@ Run them from a checkout with the package installed. Private data and weights
 are required for server checks; nothing is downloaded automatically.
 
 `commands/` contains step-level wrappers. `evaluate_mesh.py` is supplementary
-area/vertex analysis, not the default evaluator. Source and verification records
-are in `reproducibility/`; no audit utility belongs to the DentalPSAM API.
+area/vertex analysis, not the default evaluator. Store run manifests, logs,
+and verification records outside the public repository. No audit utility
+belongs to the DentalPSAM API.
 
 Run `bash tests/run_checks.sh` and `pytest -q` for regression checks, and
 `python dev/check_git_payload.py` before committing. Maintain `main` only.

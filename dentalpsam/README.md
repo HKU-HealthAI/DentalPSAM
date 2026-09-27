@@ -5,6 +5,18 @@ training, prediction, and evaluation. Start with the repository's
 [Testing and Training instructions](../README.md); the public commands are
 `test.py` and `train.py`. Modules here are not additional command-line entry points.
 
+## Bidirectional Memory Transformer (BMT)
+
+![Bidirectional Memory Transformer from Figure 2 of the MICCAI paper](../assets/bmt.png)
+
+The BMT extracts geometric features and turns them into implicit prompts for
+the 2D SAM branch. Figure 2 shows geometric feature extraction on the left
+and bidirectional cross-attention with learnable tokens on the right.
+
+In [model.py](model.py), `LSTMModel` encodes the mesh sequence and `MeshEncoder`
+uses the vendored `TwoWayTransformer` to construct geometric prompt features.
+These features enter `DentalPSAM.forward()` through the mask decoder.
+
 ## Where to start
 
 | What you want to understand | Source |
@@ -56,5 +68,17 @@ arrays. See [Dataset](../docs/DATASET.md) for the complete file contract.
 
 The vendored [SAM implementation](segment_anything/README.md) stays in place
 for checkpoint compatibility and retains its own license. Developer utilities
-are outside the installed package. Environment and scientific-reproduction
-evidence are kept separately in [reproducibility](../reproducibility/REPRODUCIBILITY.md).
+are outside the installed package.
+
+## Weights and environment
+
+The weight bundle contains `sam.pth` (SAM ViT-B initialization, originally
+`sam_vit_b_01ec64.pth`), `branch3d.pth` (the fixed 3D feature generator), and
+`dentalpsam.pth` (task-trained model weights). Prepared features and DentalPSAM
+weights must come from compatible runs. Only load trusted checkpoint files.
+
+Dependency ranges are specified in [pyproject.toml](../pyproject.toml). Server
+checks used Python 3.9.18, PyTorch 2.0.1 / CUDA 11.7, torchvision 0.15.2,
+NumPy 1.26.4, MONAI 1.3.2, OpenCV 4.10.0.84, Open3D 0.18.0, plyfile 1.1.3,
+pandas 2.3.3, patchify 0.2.3, scikit-learn 1.6.1, and tqdm 4.66.4 on an
+NVIDIA RTX 3090. Supported dependency ranges are not a tested version matrix.

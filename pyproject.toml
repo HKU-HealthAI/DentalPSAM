@@ -30,7 +30,7 @@ Repository = "https://github.com/HKU-HealthAI/DentalPSAM"
 
 [tool.setuptools.packages.find]
 include = ["dentalpsam*"]
-exclude = ["tests*", "dev*", "reproducibility*"]
+exclude = ["tests*", "dev*"]
 
 [tool.setuptools.package-data]
 dentalpsam = ["README.md", "segment_anything/README.md", "segment_anything/LICENSE"]
