@@ -1,10 +1,10 @@
-"""Train TSGCNet with patient-disjoint, area-weighted model selection.
+"""Train the 3D branch with participant-disjoint, equal-triangle validation.
 
 The upstream TSGCNet dataloader pads a 15,999-face mesh by repeating its last
 face.  This entry point excludes that repeated row from the loss and from
-validation.  Checkpoint selection uses the fixed 0.5 threshold and the mean
-physical-area plaque IoU across validation participants.  Test and External
-directories are never accepted as command-line inputs.
+validation. Checkpoint selection uses strict probability > 0.5 and the mean
+plaque IoU over validation meshes, matching the standalone paper evaluator.
+Only the declared train and validation splits participate in training.
 """
 
 
@@ -29,7 +29,7 @@ import os
 import random
 
 
-from collections import defaultdict
+import time
 
 
 from pathlib import Path
@@ -49,6 +49,7 @@ from plyfile import PlyData
 
 from torch.utils.data import DataLoader
 
+from dentalpsam.evaluation import equal_face_metrics
 
 PADDED_FACE_COUNT = 16_000
 
@@ -95,7 +96,9 @@ def read_mesh_target_and_area(label_path: Path, origin_path: Path) -> tuple[np.n
     if not all(name in label_vertices.dtype.names for name in colour_names):
         raise ValueError(f"Label PLY lacks RGB fields: {label_path}")
     colours = np.stack([label_vertices[name] for name in colour_names], axis=1)
-    target = np.any(np.all(colours[label_faces] == 0, axis=2), axis=1).astype(np.int64)
+    # Match the loader and evaluator's per-channel minimum, including coloured
+    # annotations where the zero in each channel comes from a different vertex.
+    target = np.all(np.min(colours[label_faces], axis=1) == 0, axis=1).astype(np.int64)
 
     xyz = np.stack([origin_vertices[name] for name in ("x", "y", "z")], axis=1).astype(np.float64)
     triangles = xyz[origin_faces]
@@ -155,12 +158,12 @@ def validation_metrics(
     metadata: MetadataCache,
     device: torch.device,
 ) -> dict[str, float]:
-    participant_parts: dict[str, list[tuple[np.ndarray, np.ndarray, np.ndarray]]] = defaultdict(list)
+    rows: list[dict[str, float]] = []
     model.eval()
     with torch.inference_mode():
         for index_face, points, legacy_target, _onehot, names, _raw_points in loader:
             name = names[0]
-            target, area = metadata[name]
+            target, _area = metadata[name]
             raw_count = len(target)
             if raw_count > points.shape[1]:
                 raise ValueError(f"Dataloader truncated {name}")
@@ -171,28 +174,32 @@ def validation_metrics(
                 index_face.numpy(),
             )
             score = log_probability[0, :raw_count, 1].exp().cpu().numpy()
-            participant_parts[patient_id(name)].append((target, score, area))
+            if not np.isfinite(score).all() or np.any((score < 0) | (score > 1)):
+                raise ValueError(f"Invalid validation probabilities: {name}")
+            rows.append(equal_face_metrics(target, score))
 
-    rows: list[dict[str, float]] = []
-    for parts in participant_parts.values():
-        target = np.concatenate([part[0] for part in parts]).astype(bool)
-        score = np.concatenate([part[1] for part in parts])
-        area = np.concatenate([part[2] for part in parts])
-        prediction = score >= 0.5
-        tp = float(area[target & prediction].sum())
-        fp = float(area[~target & prediction].sum())
-        fn = float(area[target & ~prediction].sum())
-        tn = float(area[~target & ~prediction].sum())
-        rows.append({
-            "plaque_iou": tp / (tp + fp + fn) if tp + fp + fn else 1.0,
-            "sensitivity": tp / (tp + fn) if tp + fn else 1.0,
-            "specificity": tn / (tn + fp) if tn + fp else 1.0,
-            "pred_coverage": (tp + fp) / (tp + fp + fn + tn),
-        })
+    if not rows:
+        raise ValueError("Validation split contains no meshes")
     return {
-        f"patient_macro_{metric}": float(np.mean([row[metric] for row in rows]))
+        f"mesh_macro_{metric}": float(np.mean([row[metric] for row in rows]))
         for metric in rows[0]
     }
+
+
+def per_face_nll(log_probability, target, class_weight):
+    """NLL over real faces, with the two classes on the last model dimension.
+
+    The model returns [1, padded_faces, 2], not [1, 2, padded_faces]. Slice
+    padding before loss reduction; never treat face positions as classes.
+    """
+    if log_probability.ndim != 3 or log_probability.shape[0] != 1 or log_probability.shape[2] != 2:
+        raise ValueError("Expected log probabilities with shape [1, faces, 2]")
+    if target.ndim != 1 or not 0 < len(target) <= log_probability.shape[1]:
+        raise ValueError("Targets must describe the nonempty, unpadded face sequence")
+    loss = torch.nn.functional.nll_loss(log_probability[0, :len(target)], target, weight=class_weight)
+    if not torch.isfinite(loss):
+        raise FloatingPointError("Non-finite 3D branch training loss")
+    return loss
 
 
 def write_csv(path: Path, rows: list[dict[str, Any]]) -> None:
@@ -217,6 +224,9 @@ def run_training(args) -> None:
             raise NotADirectoryError(f"Split must contain label/ and origin/: {split}")
 
     set_determinism(args.seed)
+    device = torch.device(args.device)
+    if device.type == "cuda" and not torch.cuda.is_available():
+        raise RuntimeError("A CUDA device was requested but CUDA is unavailable.")
     args.out_dir.mkdir(parents=True)
     from dentalpsam.branch3d.data import PlyDataset
     from dentalpsam.branch3d.model import TSGCNet
@@ -225,6 +235,8 @@ def run_training(args) -> None:
     val_dataset = PlyDataset(str(args.val_dir / "label"), enable_augmentation=False)
     train_dataset.file_list = sorted(train_dataset.file_list)
     val_dataset.file_list = sorted(val_dataset.file_list)
+    if not train_dataset.file_list or not val_dataset.file_list:
+        raise ValueError("Training and validation splits must contain meshes")
     split_contract = assert_split_contract(train_dataset.file_list, val_dataset.file_list)
 
     train_metadata = MetadataCache(args.train_dir, train_dataset.file_list)
@@ -238,7 +250,6 @@ def run_training(args) -> None:
         generator=generator,
     )
     val_loader = DataLoader(val_dataset, batch_size=1, shuffle=False, num_workers=0)
-    device = torch.device(args.device if torch.cuda.is_available() else "cpu")
     model = TSGCNet(in_channels=9, output_channels=2, k=args.k).to(device)
     optimizer = torch.optim.Adam(
         model.parameters(),
@@ -253,13 +264,28 @@ def run_training(args) -> None:
         min_lr=1e-6,
     )
     class_weight = torch.tensor([1.0, args.plaque_class_weight], device=device)
-    criterion = torch.nn.NLLLoss(weight=class_weight)
+    configuration = {
+        "loss": "per-face NLL, class axis last, padding excluded",
+        "initialization": "random; no task checkpoint loaded",
+        "selection_metric": "mesh_macro_plaque_iou",
+        "weighting": "equal original triangles",
+        "decision_rule": "score > 0.5",
+        "split_contract": split_contract,
+        "arguments": {key: str(value) if isinstance(value, Path) else value
+                      for key, value in vars(args).items()},
+        "train_meshes": train_dataset.file_list,
+        "validation_meshes": val_dataset.file_list,
+    }
+    (args.out_dir / "configuration.json").write_text(json.dumps(configuration, indent=2) + "\n")
+    print(json.dumps({key: value for key, value in configuration.items()
+                      if key not in ("train_meshes", "validation_meshes")}), flush=True)
 
     log_rows: list[dict[str, Any]] = []
     best_iou = -1.0
     best_epoch = -1
     epochs_without_improvement = 0
     for epoch in range(1, args.epochs + 1):
+        started = time.monotonic()
         model.train()
         losses: list[float] = []
         for index_face, points, legacy_target, _onehot, names, _raw_points in train_loader:
@@ -274,49 +300,70 @@ def run_training(args) -> None:
                 index_face.numpy(),
             )
             target_tensor = torch.from_numpy(target).to(torch.long).to(device)
-            loss = criterion(log_probability[0, :raw_count], target_tensor)
+            loss = per_face_nll(log_probability, target_tensor, class_weight)
             loss.backward()
             optimizer.step()
             losses.append(float(loss.detach().cpu()))
+            if len(losses) == 1 or len(losses) % 50 == 0:
+                print(f"Epoch {epoch}/{args.epochs}, mesh {len(losses)}/{len(train_loader)}, "
+                      f"mean NLL {np.mean(losses):.6f}", flush=True)
 
         metrics = validation_metrics(model, val_loader, val_metadata, device)
-        val_iou = metrics["patient_macro_plaque_iou"]
+        val_iou = metrics["mesh_macro_plaque_iou"]
         scheduler.step(val_iou)
         row: dict[str, Any] = {
             "epoch": epoch,
             "train_loss": float(np.mean(losses)),
             **metrics,
             "learning_rate": optimizer.param_groups[0]["lr"],
+            "seconds": time.monotonic() - started,
         }
         log_rows.append(row)
         write_csv(args.out_dir / "training_log.csv", log_rows)
         print(json.dumps(row, sort_keys=True), flush=True)
 
-        if val_iou > best_iou + 1e-12:
+        improved = val_iou > best_iou + 1e-12
+        if improved:
             best_iou = val_iou
             best_epoch = epoch
             epochs_without_improvement = 0
-            torch.save({
-                "epoch": epoch,
-                "model_state_dict": model.state_dict(),
-                "validation_metrics": metrics,
-                "plaque_class_weight": args.plaque_class_weight,
-                "seed": args.seed,
-                "threshold": 0.5,
-            }, args.out_dir / "best.pth")
         else:
             epochs_without_improvement += 1
+        # Retain full epoch-boundary state for recovery, without changing keys
+        # inside model_state_dict consumed by inference and feature export.
+        state = {
+            "epoch": epoch, "model_state_dict": model.state_dict(),
+            "optimizer_state_dict": optimizer.state_dict(),
+            "scheduler_state_dict": scheduler.state_dict(),
+            "validation_metrics": metrics, "best_epoch": best_epoch,
+            "best_plaque_iou": best_iou,
+            "epochs_without_improvement": epochs_without_improvement,
+            "plaque_class_weight": args.plaque_class_weight, "seed": args.seed,
+            "threshold": 0.5, "decision_rule": "score > 0.5",
+            "configuration": configuration,
+            "rng_state": {"python": random.getstate(), "numpy": np.random.get_state(),
+                          "torch": torch.get_rng_state(),
+                          "cuda": torch.cuda.get_rng_state_all() if device.type == "cuda" else [],
+                          "loader": generator.get_state()},
+        }
+        for filename in (["last.pth", "best.pth"] if improved else ["last.pth"]):
+            temporary = args.out_dir / (filename + ".tmp")
+            torch.save(state, temporary)
+            temporary.replace(args.out_dir / filename)
         if epochs_without_improvement >= args.patience:
             break
 
     checkpoint = args.out_dir / "best.pth"
     manifest = {
-        "schema_version": 1,
-        "method": "TSGCNet",
-        "selection_metric": "validation participant-macro original-triangle-area plaque IoU",
+        "schema_version": 2,
+        "method": "3D branch",
+        "selection_metric": "validation mesh-macro equal-triangle plaque IoU",
         "selection_threshold": 0.5,
+        "decision_rule": "score > 0.5",
+        "loss": configuration["loss"],
+        "initialization": configuration["initialization"],
         "best_epoch": best_epoch,
-        "best_validation_patient_macro_area_plaque_iou": best_iou,
+        "best_validation_mesh_macro_plaque_iou": best_iou,
         "epochs_completed": len(log_rows),
         "maximum_epochs": args.epochs,
         "early_stopping_patience": args.patience,

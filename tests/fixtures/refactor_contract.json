@@ -64,7 +64,9 @@
     {
       "module": "dentalpsam/branch3d/training.py",
       "name": "read_mesh_target_and_area",
-      "ast_sha256": "2d6e64fc0cceb19f3fc7285053745e591717062c5b6cce8bd045e06bf2e10105"
+      "ast_sha256": "e41afff34bd5024262b6101556474f6d0bd40d97348c175087a40de1f85aae5c",
+      "previous_ast_sha256": "2d6e64fc0cceb19f3fc7285053745e591717062c5b6cce8bd045e06bf2e10105",
+      "reviewed_change": "2026-09-28: align new-training target audit with loader/evaluator per-channel RGB minimum; multicolour regression in test_branch3d_training.py. PLY files and loader are unchanged."
     },
     {
       "module": "dentalpsam/branch3d/training.py",
@@ -84,7 +86,9 @@
     {
       "module": "dentalpsam/branch3d/training.py",
       "name": "validation_metrics",
-      "ast_sha256": "70f621bacaba72e3d273a7f1b503807e4f948aedbe03750996dc657d2e164d1b"
+      "ast_sha256": "543e137935eba67872ae18a122ee98ee25db2ef9b53a63f831d7135b18bd0007",
+      "previous_ast_sha256": "70f621bacaba72e3d273a7f1b503807e4f948aedbe03750996dc657d2e164d1b",
+      "reviewed_change": "2026-09-28: new 3D training selects mesh-macro equal-triangle plaque IoU with strict >0.5, replacing area-weighted participant-pooled validation. This is an explicit training-protocol change, not a refactor; test_branch3d_training.py covers threshold, padding and aggregation."
     },
     {
       "module": "dentalpsam/branch3d/training.py",

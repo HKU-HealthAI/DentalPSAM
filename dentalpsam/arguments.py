@@ -44,8 +44,8 @@ def branch3d_train_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         description="Stage 1: train the 3D branch using participant-disjoint splits.",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
-        epilog=("Selected weights: OUTPUT/best.pth. Selection uses area-weighted validation "
-                "plaque IoU; the public test command retains equal-triangle evaluation. "
+        epilog=("Selected weights: OUTPUT/best.pth. Selection uses mesh-macro equal-triangle "
+                "validation plaque IoU with strict probability > 0.5. "
                 "See docs/TRAINING.md."),
     )
     parser.add_argument("--train-dir", type=Path, help="Advanced: explicit training split instead of --data")
@@ -147,7 +147,7 @@ def export_features_parser() -> argparse.ArgumentParser:
 
 def branch3d_validate_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
-        description="Validate a frozen 3D branch checkpoint with original-triangle area weights."
+        description="Validate a frozen 3D branch checkpoint with equal-triangle metrics."
     )
     parser.add_argument("--checkpoint", type=Path, required=True)
     parser.add_argument("--val-dir", type=Path, required=True)

@@ -18,10 +18,22 @@ automatically downloaded. Use new output paths outside the input data tree.
 python train.py --stage 3d --data data --output outputs/3d
 ```
 
-The selected checkpoint is `outputs/3d/best.pth`. The retained training defaults
+The selected checkpoint is `outputs/3d/best.pth`. The training defaults
 are 50 epochs, batch size 1, Adam at `1e-4`, weight decay `1e-5`, NLL loss,
-ReduceLROnPlateau, patience 12, and seed 42. Selection uses participant-macro
-area-weighted validation plaque IoU, not the equal-triangle test estimator.
+ReduceLROnPlateau, early-stop patience 12, and seed 42. Selection uses the mean
+equal-triangle plaque IoU over validation meshes, with strict probability
+`> 0.5`. Participants remain separated between training and validation.
+Use `--epochs 50 --patience 50` to run all 50 epochs without early stopping.
+
+The model returns `[1, faces, 2]` log probabilities. NLL is evaluated over the
+two classes for each original face; repeated padding rows do not contribute.
+This is the current training objective, not a replay of the historical
+Dice-Focal trainer. The model architecture and input normalization are retained.
+
+`configuration.json` records the declared split and options before training.
+`training_log.csv` records each epoch. `best.pth` and `last.pth` contain model,
+optimizer, scheduler, and random-generator state; inference loads only the model
+state. Automatic training resume is not currently exposed by the CLI.
 
 ## 2. Train DentalPSAM
 
@@ -80,7 +92,8 @@ Use `--device cuda:1` to choose a GPU. The 3D stage enables deterministic
 settings; use `--deterministic` for DentalPSAM. Exact bitwise identity across
 PyTorch versions or GPUs is not promised.
 
-These are the retained validation-only trainers, not a claim of exact historical
-training replay. Cleanup does not modify losses, selection rules, normalization,
-or the paper evaluator to improve scores. See the [package guide](../dentalpsam/README.md)
+Validation selects the checkpoint; test data are not used by either trainer.
+The 3D validation rule is aligned with the paper evaluator for new training
+runs. This does not change predictions from existing checkpoints or the
+DentalPSAM stage-2 trainer. See the [package guide](../dentalpsam/README.md)
 for model contracts and the tested environment.

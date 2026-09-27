@@ -1,4 +1,4 @@
-"""Validate a frozen TSGCNet checkpoint with original-triangle area weights."""
+"""Validate a frozen 3D branch checkpoint with equal-triangle metrics."""
 
 
 from __future__ import annotations
@@ -54,11 +54,12 @@ def validate_checkpoint(args) -> None:
     model.load_state_dict(load_model_state(checkpoint, device), strict=True)
     metrics = validation_metrics(model, loader, metadata, device)
     payload = {
-        "schema_version": 1,
+        "schema_version": 2,
         "checkpoint_sha256": sha256(checkpoint),
         "threshold": 0.5,
-        "aggregation": "participant macro after combining meshes by four-character ID prefix",
-        "weighting": "original PLY triangle surface area",
+        "decision_rule": "score > 0.5",
+        "aggregation": "arithmetic mean of per-mesh metrics",
+        "weighting": "equal original triangles",
         "padding_policy": "exclude repeated rows beyond raw PLY face count",
         "mesh_count": len(dataset.file_list),
         "metrics": metrics,

@@ -147,12 +147,16 @@ with back-projected 2D predictions; it does not fuse the auxiliary input scores.
 
 The stage-1 defaults are 50 maximum epochs, batch size 1, Adam with learning
 rate `1e-4` and weight decay `1e-5`, NLL loss, and seed 42. Augmentation is
-disabled. Validation participant-macro area-weighted plaque IoU selects the
-checkpoint; early stopping uses patience 12. These validation scores are not
-the equal-triangle test metrics produced by the public `test.py` command.
+disabled. Mean per-mesh equal-triangle validation plaque IoU selects the
+checkpoint, using strict probability `> 0.5`, as in the standalone evaluator.
+Early stopping uses patience 12; `--epochs 50 --patience 50` runs all 50 epochs.
+The loss treats the final two channels as classes and excludes repeated padding
+faces. This NLL objective is not the historical Dice-Focal training objective.
 
-Training writes `best.pth`, `training_log.csv`, and `manifest.json` to the new
-output directory. `python train.py --stage 3d --help` lists the available options.
+Training writes `configuration.json`, `best.pth`, `last.pth`, `training_log.csv`,
+and a final `manifest.json` to the new output directory. Checkpoints retain
+optimizer, scheduler, and random-generator state alongside the unchanged model
+state dictionary. `python train.py --stage 3d --help` lists the available options.
 
 ## Source map
 
@@ -160,5 +164,5 @@ output directory. `python train.py --stage 3d --help` lists the available option
 - [model.py](model.py), [utils.py](utils.py): model layers and neighbourhood gathering.
 - [training.py](training.py): participant-disjoint training and checkpoint selection.
 - [features.py](features.py): frozen-checkpoint scores and aligned DentalPSAM inputs.
-- [validation.py](validation.py): validation-only area-weighted diagnostics.
+- [validation.py](validation.py): fixed-checkpoint equal-triangle validation.
 - [reporting.py](reporting.py): standalone fixed-checkpoint equal-triangle evaluation.
