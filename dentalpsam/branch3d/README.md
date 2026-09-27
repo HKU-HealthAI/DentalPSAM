@@ -99,6 +99,39 @@ Unlike this classifier's binary labels, exported annotation targets preserve
 values. DentalPSAM uses them directly as continuous targets in its mesh BCE.
 The paper evaluator retains its separate binary face-label rule.
 
+### Regenerate prepared mesh files
+
+Training and testing normally prepare these inputs automatically. To rebuild
+them separately for an existing split with UV metadata:
+
+```bash
+python -m dentalpsam.branch3d.features \
+  --data data/train --checkpoint checkpoints/branch3d.pth \
+  --output outputs/prepared_train --device cuda:0
+```
+
+The default fixed list is `data/train/mesh_ids.txt`; `--mesh-list` overrides it.
+Repeat with `data/val` and `data/test`, keeping their original membership.
+Both the public dataset layout and the historical `origin/label/manual_2D`
+layout are accepted. Existing rendered views and UV metadata are reused;
+no annotation or input file is overwritten.
+
+The fresh output contains `label_mesh/*.npz` (annotation-derived continuous
+targets), `SOTA_mesh/*.npz` (model-derived plaque probabilities),
+`SOTA_pred/*.png` (auxiliary visualizations), and `scores/*.npy` (unpadded scores
+in original face order). Each NPZ contains `up/in/out` patch rows and their
+`face_order_up/in/out` arrays. Both NPZ files are reopened and checked against
+their own source values before the export is accepted. `export_manifest.json`
+records the checkpoint, source/input hashes, output hashes and verification.
+
+For source compatibility, patch assignment retains upper-bound-only UV
+clipping and Python negative indexing. Auxiliary rasterization truncates
+coordinates and pixel intensity. These details affect cached inputs: do not
+replace them with lower-bound clipping or rounding for an existing checkpoint.
+Predictions use the source exporter's class-1 softmax conversion in evaluation
+mode; ground-truth targets never pass through the model. Do not populate both
+NPZ files from the same prediction array.
+
 The auxiliary scores generated here are **not** DentalPSAM's final 3D output.
 DentalPSAM's [MeshDecoder](../model.py) also uses 2D appearance features and
 produces its own mesh logits. The final evaluator fuses those predictions

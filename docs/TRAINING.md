@@ -35,6 +35,12 @@ The command prepares views and frozen 3D features automatically in a separate
 source data or change the 3D checkpoint. When compatible prepared inputs already
 exist, omit `--branch-checkpoint` to reuse them.
 
+Existing files are not proof that a prepared cache is correct. After changing
+the 3D checkpoint, or when label-cache provenance is uncertain, regenerate
+both feature and target files in a new directory using the
+[mesh export command](../dentalpsam/branch3d/README.md#regenerate-prepared-mesh-files).
+Keep the same split lists and the original PLY annotations.
+
 Defaults are 50 epochs, batch size 4, Adam at `1e-4`, zero weight decay, StepLR
 at epoch 40 with gamma 0.1, seed 42, 2D Dice-CE weight 2, and mesh BCE weight 1.
 There is no early stopping. Mesh BCE uses continuous annotation values from

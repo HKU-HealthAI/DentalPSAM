@@ -1,4 +1,4 @@
-"""Export a frozen TSGCNet checkpoint to DentalPSAM SOTA-mesh patches.
+"""Regenerate aligned mesh targets and frozen 3D-branch feature predictions.
 
 This is a safe replacement for the historical ``pred_to_2d_new.py`` path.
 It requires a real checkpoint, writes outside the raw-data tree, keeps model
@@ -125,21 +125,23 @@ def patch_rows(
         row = np.empty(10, dtype=np.float64)
         row[:9] = vertices[triangle].reshape(-1)
         row[9] = score
-        centre = np.mean(uv_pixels[triangle], axis=0)
+        centre = np.mean(np.asarray(uv_pixels[triangle], dtype=np.float64), axis=0)
         if not np.all(np.isfinite(centre)):
             raise ValueError(f"{view}: non-finite UV centre")
-        if view == "up":
-            column = int(np.clip(centre[0], 0, 767) // 256)
-            patch_row = int(np.clip(centre[1], 0, 511) // 256)
-            patch = column + 3 * patch_row
-        else:
-            patch = int(np.clip(centre[0], 0, 2047) // 256)
-        if patch < 0 or patch >= count:
+        height, width = VIEW_SHAPES[view]
+        # Compatibility with pred_to_2d_new.process_surface_triangles:
+        # clip only the upper bounds. Negative centres use Python's negative
+        # list indexing, including the historical factor 3 for every view.
+        # Lower-bound clipping changes patch membership on real study meshes.
+        column = int(min(centre[0], width - 1) // 256)
+        patch_row = int(min(centre[1], height - 1) // 256)
+        patch = column + 3 * patch_row
+        if patch < -count or patch >= count:
             raise ValueError(f"{view}: invalid patch index {patch}")
         patches[patch].append(row)
         orders[patch].append(order)
     patch_arrays = [
-        np.asarray(part, dtype=np.float64).reshape(-1, 10) if part else np.empty((0, 10), dtype=np.float64)
+        np.asarray(part, dtype=np.float64)
         for part in patches
     ]
     order_arrays = [np.asarray(part, dtype=np.int64) for part in orders]
@@ -148,13 +150,53 @@ def patch_rows(
 
 def rasterize(view: str, triangles: np.ndarray, uv_pixels: np.ndarray, scores: np.ndarray) -> np.ndarray:
     height, width = VIEW_SHAPES[view]
-    image = np.zeros((height, width), dtype=np.uint8)
+    image = np.zeros((height, width, 3), dtype=np.uint8)
     for triangle, score in zip(triangles, scores):
-        polygon = np.rint(uv_pixels[triangle]).astype(np.int32)
-        polygon[:, 0] = np.clip(polygon[:, 0], 0, width - 1)
-        polygon[:, 1] = np.clip(polygon[:, 1], 0, height - 1)
-        cv2.fillPoly(image, [polygon.reshape(-1, 1, 2)], int(round(float(score) * 255.0)))
+        # The source exporter truncates both polygon coordinates and intensity.
+        # OpenCV clips polygons at the image boundary; do not clip vertices.
+        polygon = uv_pixels[triangle].astype(np.int32)
+        intensity = int(float(score) * 255.0)
+        cv2.fillPoly(image, [polygon.reshape(-1, 1, 2)], (intensity,) * 3)
     return image
+
+
+def verify_patch_file(
+    path: Path,
+    vertices: np.ndarray,
+    triangles_by_view: dict[str, np.ndarray],
+    scores_by_view: dict[str, np.ndarray],
+) -> None:
+    """Reopen an export and check geometry, order, and scores face by face.
+
+    Call separately with annotation-derived targets and model-derived scores.
+    Equal prediction/target arrays alone are not an error: a perfect predictor
+    could legitimately match the annotation. Each must match its own source.
+    """
+    with np.load(path, allow_pickle=True) as cache:
+        for view in VIEWS:
+            triangles = triangles_by_view[view]
+            parts, orders = cache[view], cache[f"face_order_{view}"]
+            if len(parts) != VIEW_PATCH_COUNTS[view] or len(orders) != len(parts):
+                raise ValueError(f"Wrong patch count: {path.name}/{view}")
+            rows, indices = [], []
+            for part, order in zip(parts, orders):
+                part = np.asarray(part)
+                order = np.asarray(order)
+                if part.shape == (0,):
+                    part = part.reshape(0, 10)
+                if part.ndim != 2 or part.shape[1] != 10 or len(part) > 6000:
+                    raise ValueError(f"Invalid mesh patch shape: {path.name}/{view}")
+                if order.ndim != 1 or order.dtype.kind not in "iu" or len(order) != len(part):
+                    raise ValueError(f"Invalid face order: {path.name}/{view}")
+                rows.append(part)
+                indices.append(order)
+            rows, indices = np.concatenate(rows), np.concatenate(indices)
+            if not np.array_equal(np.sort(indices), np.arange(len(triangles))):
+                raise ValueError(f"Incomplete face permutation: {path.name}/{view}")
+            if not np.array_equal(rows[:, :9], vertices[triangles[indices]].reshape(-1, 9)):
+                raise ValueError(f"Geometry mismatch: {path.name}/{view}")
+            if not np.array_equal(rows[:, 9], scores_by_view[view][indices]):
+                raise ValueError(f"Score/target mismatch: {path.name}/{view}")
 
 
 def export_features(args) -> None:
@@ -186,7 +228,9 @@ def export_features(args) -> None:
     dataset.file_list = sorted(name for name in dataset.file_list if name in wanted)
     if set(dataset.file_list) != wanted:
         raise ValueError("Requested mesh list does not match the TSGCNet dataset")
-    device = torch.device(args.device if torch.cuda.is_available() else "cpu")
+    device = torch.device(args.device)
+    if device.type == "cuda" and not torch.cuda.is_available():
+        raise RuntimeError("CUDA was requested but is unavailable")
     model = TSGCNet(in_channels=9, output_channels=2, k=args.k).to(device)
     model.load_state_dict(checkpoint_state(args.checkpoint, device))
     model.eval()
@@ -213,18 +257,23 @@ def export_features(args) -> None:
             if not np.array_equal(faces, label_faces) or label_colours is None:
                 raise ValueError(f"Invalid label topology or colours: {mesh_id}")
             raw_count = len(faces)
+            if not 0 < raw_count <= 16000:
+                raise ValueError(f"Expected 1..16000 original faces: {mesh_id}")
             if not np.array_equal(index_face[:raw_count], faces):
                 raise ValueError(f"TSGCNet face order differs from origin PLY: {mesh_id}")
-            target = np.any(np.all(label_colours[faces] == 0, axis=2), axis=1).astype(np.float64)
+            target = np.all(np.min(label_colours[faces], axis=1) == 0, axis=1).astype(np.float64)
             if not np.array_equal(legacy_target[:raw_count, 0], target):
                 raise ValueError(f"TSGCNet and raw PLY targets differ: {mesh_id}")
             # Classification/evaluation targets stay binary. Mesh BCE must keep
             # the annotation's intermediate grayscale values, as in the source exporter.
             mesh_target = soft_face_targets(label_colours, faces)
 
-            tensor = torch.from_numpy(points).unsqueeze(0).transpose(2, 1).to(torch.float32).to(device)
+            tensor = torch.from_numpy(points).unsqueeze(0).transpose(2, 1).contiguous().to(torch.float32).to(device)
             log_probability = model(tensor, np.expand_dims(index_face, axis=0))
-            face_scores = log_probability[0, :raw_count, 1].exp().cpu().numpy().astype(np.float64)
+            # Match the source exporter's softmax conversion exactly, including
+            # floating-point rounding; the model itself returns log-probability.
+            probabilities = torch.softmax(log_probability.contiguous().view(-1, 2), dim=1)
+            face_scores = probabilities[:raw_count, 1].cpu().numpy().astype(np.float64)
             if not np.all(np.isfinite(face_scores)) or np.any((face_scores < 0) | (face_scores > 1)):
                 raise ValueError(f"Invalid model probability: {mesh_id}")
             score_path = args.out_dir / "scores" / f"{mesh_id}.npy"
@@ -236,6 +285,7 @@ def export_features(args) -> None:
                 raise ValueError(f"Duplicate original face connectivity: {mesh_id}")
             prediction_npz: dict[str, np.ndarray] = {}
             target_npz: dict[str, np.ndarray] = {}
+            triangles_by_view, scores_by_view, targets_by_view = {}, {}, {}
             used_indices: list[int] = []
             with np.load(info_path, allow_pickle=True) as info:
                 for view in VIEWS:
@@ -245,6 +295,9 @@ def export_features(args) -> None:
                     used_indices.extend(indices.tolist())
                     view_scores = face_scores[indices]
                     view_target = mesh_target[indices]
+                    triangles_by_view[view] = triangles
+                    scores_by_view[view] = view_scores
+                    targets_by_view[view] = view_target
                     prediction_npz[view], prediction_npz[f"face_order_{view}"] = patch_rows(
                         view, triangles, uv_pixels, vertices, view_scores,
                     )
@@ -262,6 +315,8 @@ def export_features(args) -> None:
             label_mesh_path = args.out_dir / "label_mesh" / f"{mesh_id}.npz"
             np.savez_compressed(sota_path, **prediction_npz)
             np.savez_compressed(label_mesh_path, **target_npz)
+            verify_patch_file(sota_path, vertices, triangles_by_view, scores_by_view)
+            verify_patch_file(label_mesh_path, vertices, triangles_by_view, targets_by_view)
             output_files.extend((sota_path, label_mesh_path))
             cases.append({
                 "mesh_id": mesh_id,
@@ -273,8 +328,9 @@ def export_features(args) -> None:
             print(f"{mesh_id}: {raw_count} verified faces", flush=True)
 
     manifest = {
-        "schema_version": 1,
-        "method": "TSGCNet frozen-checkpoint DentalPSAM SOTA-mesh export",
+        "schema_version": 2,
+        "status": "completed",
+        "method": "frozen 3D-branch feature and annotation export",
         "checkpoint": str(args.checkpoint),
         "checkpoint_sha256": sha256(args.checkpoint),
         "mesh_list": str(args.mesh_list),
@@ -284,6 +340,12 @@ def export_features(args) -> None:
         "model_probability_location": "SOTA_mesh patch row column 9",
         "ground_truth_location": "label_mesh patch row column 9",
         "ground_truth_encoding": "1 - min(vertex annotation RGB / 255, per channel)[0]; continuous BCE target",
+        "prediction_encoding": "softmax(model log-probabilities, dim=class)[:, 1]; P(plaque)",
+        "patch_assignment": "source upper-only UV clipping with Python negative indexing",
+        "verification": "both NPZ files reopened; geometry, permutation and all scores/targets checked",
+        "device": str(device),
+        "k": args.k,
+        "torch_version": torch.__version__,
         "source_png_gt_leakage_path_used": False,
         "raw_data_modified": False,
         "uv_info_dir": str(args.info_dir),
@@ -296,7 +358,7 @@ def export_features(args) -> None:
             "\n".join(f"{path}:{sha256(path)}" for path in input_files).encode("utf-8")
         ).hexdigest(),
         "output_file_set_sha256": hashlib.sha256(
-            "\n".join(f"{path.name}:{sha256(path)}" for path in output_files).encode("utf-8")
+            "\n".join(f"{path.relative_to(args.out_dir)}:{sha256(path)}" for path in output_files).encode("utf-8")
         ).hexdigest(),
         "cases": cases,
     }
@@ -304,3 +366,42 @@ def export_features(args) -> None:
         json.dumps(manifest, indent=2, sort_keys=True) + "\n",
         encoding="utf-8",
     )
+
+
+def main() -> None:
+    """Regenerate both caches for one fixed split without touching source data."""
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--data", type=Path, required=True, help="One split with meshes/labels and processed/metadata, or origin/label and manual_2D/info.")
+    parser.add_argument("--checkpoint", type=Path, required=True, help="Frozen 3D-branch state dictionary.")
+    parser.add_argument("--mesh-list", type=Path, help="Fixed mesh list; defaults to DATA/mesh_ids.txt.")
+    parser.add_argument("--output", type=Path, required=True, help="New output directory, outside the source data.")
+    parser.add_argument("--device", default="cuda:0")
+    parser.add_argument("--k", type=int, default=12)
+    args = parser.parse_args()
+    from dentalpsam._layout import SplitLayout
+
+    layout = SplitLayout.read(args.data)
+    source = args.data.expanduser().resolve()
+    output = args.output.expanduser().resolve()
+    if output.exists():
+        raise FileExistsError(f"Refusing to overwrite existing output: {output}")
+    if output == source or source in output.parents:
+        raise ValueError("Derived output must be outside the raw-data tree")
+    mesh_list = args.mesh_list or source / "mesh_ids.txt"
+    info = layout.processed / ("metadata" if layout.public else "info")
+    for path in (mesh_list, args.checkpoint):
+        if not path.is_file():
+            raise FileNotFoundError(path)
+    if not info.is_dir():
+        raise NotADirectoryError(f"Existing UV metadata required: {info}")
+    # The model loader retains its checkpoint-sensitive historical layout.
+    # For public names, create links in a new sibling directory, not in DATA.
+    data = layout.legacy_view(output.with_name(output.name + "_inputs"), include_processed=False)
+    export_features(argparse.Namespace(
+        checkpoint=args.checkpoint, data_dir=data, info_dir=info,
+        mesh_list=mesh_list, out_dir=output, device=args.device, k=args.k,
+    ))
+
+
+if __name__ == "__main__":
+    main()

@@ -20,3 +20,5 @@ done
 "$validation_python" train.py --stage 3d --help > /dev/null
 "$validation_python" train.py --stage dentalpsam --help > /dev/null
 printf 'PASS: both training stages --help\n'
+"$validation_python" -m dentalpsam.branch3d.features --help > /dev/null
+printf 'PASS: mesh feature regeneration --help\n'
