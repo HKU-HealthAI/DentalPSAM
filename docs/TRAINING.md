@@ -37,7 +37,9 @@ exist, omit `--branch-checkpoint` to reuse them.
 
 Defaults are 50 epochs, batch size 4, Adam at `1e-4`, zero weight decay, StepLR
 at epoch 40 with gamma 0.1, seed 42, 2D Dice-CE weight 2, and mesh BCE weight 1.
-There is no early stopping. Zero-padded rows are excluded from mesh loss, and
+There is no early stopping. Mesh BCE uses continuous annotation values from
+`mesh_labels`, not the standalone 3D classifier's binary targets. Zero-padded
+rows are excluded from mesh loss, and
 training and validation patches require at least 50 positive label pixels;
 test prediction keeps all patches. Validation mesh
 BCE selects `outputs/dentalpsam/best_model.pth`.

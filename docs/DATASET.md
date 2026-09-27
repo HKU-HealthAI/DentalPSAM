@@ -43,9 +43,13 @@ test or external evaluation data for checkpoint or threshold selection.
 
 `meshes/` contains preprocessed, gingiva-removed coloured PLY meshes;
 `labels/` contains matching PLY annotations with exactly the same vertices,
-triangles, and ordering. Plaque vertices are exactly black. The original
-triangle target uses the per-channel minimum of its vertex colours; binary
-black/white annotations make any black vertex a positive triangle.
+triangles, and ordering. Annotations can contain intermediate grayscale values;
+they do not have to be purely black and white. The standalone 3D classifier
+and paper evaluator mark a triangle positive only when its per-channel minimum
+vertex RGB is `[0, 0, 0]`. On grayscale annotations this means at least one
+vertex is exactly black. DentalPSAM's mesh BCE instead retains the continuous
+target `1 - min(vertex RGB / 255, per channel)[0]`. Do not replace these soft
+training targets with the classifier's binary labels.
 
 Keep the supplied coordinate system and length units. The code does not infer
 millimetres from filenames. Annotation geometry and scan geometry must agree.
@@ -68,7 +72,7 @@ DentalPSAM model. A different 3D checkpoint is not an interchangeable input.
 | `images` | Three uint8 colour PNGs: upper (`0`, 512 × 768), inner (`1`, 256 × 2048), outer (`2`, 256 × 2048). Loaded as RGB, values 0–255. |
 | `image_labels` | Matching PNG masks; grayscale values strictly above 127 are plaque. |
 | `mesh_features` | Trusted NPZ with `up`, `in`, `out` object arrays and `face_order_*` arrays. Each face row contains nine triangle XYZ values plus `P(plaque)`. |
-| `mesh_labels` | Same patch layout, but channel 9 contains the binary annotation. These are targets, never substitutes for input probabilities. |
+| `mesh_labels` | Same patch layout, but channel 9 retains the continuous annotation `1 - min(vertex RGB / 255, per channel)[0]` for mesh BCE. These are targets, never substitutes for input probabilities. |
 | `metadata` | `uvpx_up/in/out`: vertex pixel coordinates `[V, 2]`; `tri_up/in/out`: integer vertex-index triples `[F_view, 3]`. Preserve stored dtypes and order. |
 
 Each view becomes row-major 256 × 256 patches: 6 upper, 8 inner, 8 outer.

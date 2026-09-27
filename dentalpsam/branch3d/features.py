@@ -88,6 +88,23 @@ def face_key(face: np.ndarray) -> tuple[int, int, int]:
     return tuple(sorted(int(value) for value in face))
 
 
+def soft_face_targets(colours: np.ndarray, faces: np.ndarray) -> np.ndarray:
+    """Preserve the continuous targets used by the original mesh-label export.
+
+    Annotation PLY colours include intermediate grayscale values. The original
+    exporter reads RGB in [0, 1], takes the per-channel vertex minimum on each
+    triangle, inverts it, and retains channel 0. These targets supervise the
+    DentalPSAM mesh BCE; they are NOT the binary targets used by the standalone
+    3D classifier or the equal-triangle test evaluator.
+    """
+    colours = np.asarray(colours, dtype=np.float64)
+    if colours.ndim != 2 or colours.shape[1] != 3:
+        raise ValueError("Expected annotation RGB with shape [vertices, 3]")
+    if not np.isfinite(colours).all() or np.any((colours < 0) | (colours > 255)):
+        raise ValueError("Annotation RGB must contain finite values in [0, 255]")
+    return (1.0 - np.min((colours / 255.0)[faces], axis=1))[:, 0]
+
+
 def object_array(parts: list[np.ndarray]) -> np.ndarray:
     result = np.empty(len(parts), dtype=object)
     result[:] = parts
@@ -201,6 +218,9 @@ def export_features(args) -> None:
             target = np.any(np.all(label_colours[faces] == 0, axis=2), axis=1).astype(np.float64)
             if not np.array_equal(legacy_target[:raw_count, 0], target):
                 raise ValueError(f"TSGCNet and raw PLY targets differ: {mesh_id}")
+            # Classification/evaluation targets stay binary. Mesh BCE must keep
+            # the annotation's intermediate grayscale values, as in the source exporter.
+            mesh_target = soft_face_targets(label_colours, faces)
 
             tensor = torch.from_numpy(points).unsqueeze(0).transpose(2, 1).to(torch.float32).to(device)
             log_probability = model(tensor, np.expand_dims(index_face, axis=0))
@@ -224,7 +244,7 @@ def export_features(args) -> None:
                     indices = np.asarray([mesh_index[face_key(face)] for face in triangles], dtype=np.int64)
                     used_indices.extend(indices.tolist())
                     view_scores = face_scores[indices]
-                    view_target = target[indices]
+                    view_target = mesh_target[indices]
                     prediction_npz[view], prediction_npz[f"face_order_{view}"] = patch_rows(
                         view, triangles, uv_pixels, vertices, view_scores,
                     )
@@ -247,6 +267,7 @@ def export_features(args) -> None:
                 "mesh_id": mesh_id,
                 "raw_face_count": raw_count,
                 "plaque_fraction": float(target.mean()),
+                "continuous_target_face_count": int(np.sum((mesh_target > 0) & (mesh_target < 1))),
                 "predicted_probability_mean": float(face_scores.mean()),
             })
             print(f"{mesh_id}: {raw_count} verified faces", flush=True)
@@ -262,6 +283,7 @@ def export_features(args) -> None:
         "patient_count": len({mesh_id[:4] for mesh_id in ids}),
         "model_probability_location": "SOTA_mesh patch row column 9",
         "ground_truth_location": "label_mesh patch row column 9",
+        "ground_truth_encoding": "1 - min(vertex annotation RGB / 255, per channel)[0]; continuous BCE target",
         "source_png_gt_leakage_path_used": False,
         "raw_data_modified": False,
         "uv_info_dir": str(args.info_dir),

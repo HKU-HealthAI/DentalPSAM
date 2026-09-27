@@ -39,9 +39,10 @@ substituting another checkpoint changes the model inputs.
 
 One sample is a topology-matched pair of coloured scan and annotation PLY
 meshes. The loader reads scan colours from the scan, not from the annotation.
-Annotations provide targets: black vertices denote plaque (class 1), and
-non-plaque is class 0. Binary black/white annotations mark a triangle as
-plaque when any of its vertices is black.
+Annotations provide targets: a face's per-channel minimum vertex RGB must be
+`[0, 0, 0]` to denote plaque (class 1); otherwise its class is 0. Intermediate
+grayscale values are valid annotations. For grayscale annotations, the rule
+marks a triangle as plaque when any of its vertices is exactly black.
 
 The loader constructs 33 features per face. Column ranges below are Python
 slices, with an exclusive right endpoint.
@@ -92,6 +93,11 @@ Feature probabilities and annotation targets are stored separately. The
 exporter records face-order indices and checks that the three views cover
 every original face exactly once. The DentalPSAM loader then left-pads each
 patch to 6,000 rows without changing its order.
+
+Unlike this classifier's binary labels, exported annotation targets preserve
+`1 - min(vertex RGB / 255, per channel)[0]`, including intermediate grayscale
+values. DentalPSAM uses them directly as continuous targets in its mesh BCE.
+The paper evaluator retains its separate binary face-label rule.
 
 The auxiliary scores generated here are **not** DentalPSAM's final 3D output.
 DentalPSAM's [MeshDecoder](../model.py) also uses 2D appearance features and
