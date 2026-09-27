@@ -34,14 +34,14 @@ These items record a source/document inspection, not a completed runtime gate.
 - [x] Run `bash tests/run_checks.sh` before and after structural changes.
 - [x] Run `pytest -q` from a clean checkout.
 - [x] Build a wheel containing only `dentalpsam` and distribution metadata.
-- [ ] Confirm original inputs/outputs and both checkpoint variants remain
+- [x] Confirm original inputs/outputs and both checkpoint variants remain
   compatible on the designated validation server.
 - [x] Scan the Git index for patient artifacts, private paths, and
   credentials, and verify that a clean checkout contains the documented scripts.
 - [ ] Have a reader unfamiliar with the code perform the five-minute check below.
 
-Current status: **CPU checks passed; private-checkpoint and reader checks
-pending**. The [pre-change workflow for 6eea823](https://github.com/HKU-HealthAI/DentalPSAM/actions/runs/36313653347)
+Current status: **CPU and server compatibility checks passed; independent reader
+check pending**. The [pre-change workflow for 6eea823](https://github.com/HKU-HealthAI/DentalPSAM/actions/runs/36313653347)
 passed the original regression command. The
 [public-surface workflow for 676e8de](https://github.com/HKU-HealthAI/DentalPSAM/actions/runs/36314319661)
 passed editable installation, compilation, 76 pytest checks, all eight original
@@ -50,9 +50,21 @@ This includes exact tensor equality through the directory adapter and pinned
 numerical-source checks. Model and UV source files were not restructured.
 The demonstration program was removed at author request; only unit/regression
 test fixtures remain, not a generated-data example or a model-quality claim.
-These CPU checks do not replace private-checkpoint server verification.
-The SSH jump route was unavailable during the latest final-candidate attempt.
-No training or paper-metric optimization was launched to work around it.
+The [29189a4 workflow](https://github.com/HKU-HealthAI/DentalPSAM/actions/runs/36316060775)
+also passed, including the packaged SAM license and package guide checks.
+
+After connectivity recovered, revision `29189a4` passed the same 76 tests and
+eight regression suites on research23 using the Python 3.9 reference stack.
+[Server evidence](verification/release_29189a4.json) records exact native inputs
+and zero output differences for gated/concat DentalPSAM and the 3D branch.
+The public `test.py --data ... --weights ... --output ...` workflow regenerated
+views and 3D features for one real mesh, with predictions exactly matching the
+pre-refactor pipeline. For 120 fixed cached meshes, plaque IoU/Dice matched the
+native evaluator individually; aggregate metrics and CIs matched the earlier
+evaluation. All 240 original PLY hashes remained unchanged. No training,
+test-set checkpoint selection, or score-convention change was performed.
+Later README wording changes do not alter the tested numerical source.
+The separate paper-result gate remains open.
 
 ## Commands
 

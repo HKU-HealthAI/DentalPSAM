@@ -3,7 +3,38 @@
 Archived, revision-bound evidence. These checks do not certify later commits;
 the current repository gate is tracked in [Acceptance](../ACCEPTANCE.md).
 
-## Current follow-up: input alignment and complete-cohort checks
+## Public-interface verification: revision 29189a4
+
+[Aggregate evidence](../verification/release_29189a4.json) records the follow-up
+on research23 in the `py39_rt2` Python 3.9.18 / PyTorch 2.0.1 / CUDA 11.7 stack,
+using GPUs 3 and 4. Pytest ran through the existing dependency-only test overlay
+on that stack; all model execution used `py39_rt2` directly.
+
+- 76 pytest tests, the eight original regression suites, and all help checks
+  passed. [GitHub CI](https://github.com/HKU-HealthAI/DentalPSAM/actions/runs/36316060775)
+  separately passed editable installation and wheel-content checks.
+- Gated and concat DentalPSAM matched their respective native source and
+  checkpoints on the same real patch: input tensors identical; both output
+  maximum absolute differences zero. The 3D branch also matched exactly on
+  the corresponding 16,000-face input.
+- The single public test command used the public dataset names and weight
+  bundle. It regenerated UV views and 3D inputs for one real mesh, then ran
+  prediction and evaluation. All nine PNG/NPZ prediction files matched the
+  pre-refactor pipeline numerically, not just in shape or aggregate score.
+- On all 120 fixed cached meshes, plaque IoU and Dice matched the original
+  evaluator **per mesh**. The aggregate results and all confidence intervals
+  were identical to the earlier full-cohort evaluation below.
+- SHA-256 checks before and after covered all 240 raw input/label PLY files;
+  none changed. Commands, logs, and per-mesh comparisons remain in the isolated
+  server run; the public JSON contains no patient identifiers or private paths.
+
+The full-cohort part re-evaluates saved predictions; it is not a new
+120-mesh inference run. Compatibility checkpoints are not asserted to have
+generated that cache or the MICCAI table. The paper-checkpoint/input chain is
+still unresolved; no cases, thresholds, or fusion weights were changed to
+reduce the paper-result discrepancy.
+
+## Earlier follow-up: input alignment and complete-cohort checks
 
 Code revision: `40c8604`. Eight synthetic regression suites and fourteen CLI
 import/help checks passed in Python 3.9.18, PyTorch 2.0.1 / CUDA 11.7 on the
