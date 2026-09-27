@@ -1,51 +1,23 @@
 """Train the checkpoint-compatible DentalPSAM model."""
 
-
 from __future__ import annotations
 
-
 import argparse
-
-
 import hashlib
-
-
 import json
-
-
 import platform
-
-
 import random
-
-
 import sys
-
-
 from pathlib import Path
 
-
 import monai
-
-
 import numpy as np
-
-
 import torch
-
-
 from torch.utils.data import DataLoader
 
-
 from dentalpsam.checkpoints import build_sam_vit_b
-
-
 from dentalpsam.data import SAMDataset, load_and_patchify_png
-
-
 from dentalpsam.model import DentalPSAM
-
-
 from dentalpsam.mesh_targets import (
     binary_mesh_intersection_union,
     binary_mesh_targets,
@@ -151,6 +123,11 @@ def make_loader(
     shuffle: bool,
     seed: int,
 ) -> DataLoader:
+    """Load aligned patches, applying the same filter to images and mesh rows.
+
+    Both train and validation use this loader. The caller selects shuffling;
+    the fixed-list test pipeline uses a separate loader without patch filtering.
+    """
     images, masks, mesh, labels = load_and_patchify_png(
         str(data_dir), min_positive_pixels=min_positive_pixels
     )
@@ -181,6 +158,12 @@ def run_epoch(
     target_threshold: float,
     optimizer: torch.optim.Optimizer | None,
 ) -> dict[str, float]:
+    """Run training when an optimizer is supplied, otherwise validation.
+
+    Combine 2D Dice-CE and mesh BCE losses; exclude padded faces from mesh
+    supervision. Returned IoUs are training diagnostics, not the fused mesh
+    estimates produced by the public test command.
+    """
     training = optimizer is not None
     model.train(training)
     totals = {"loss": 0.0, "image_loss": 0.0, "mesh_loss": 0.0}

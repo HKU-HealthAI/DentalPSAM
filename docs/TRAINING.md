@@ -38,12 +38,28 @@ exist, omit `--branch-checkpoint` to reuse them.
 Defaults are 50 epochs, batch size 4, Adam at `1e-4`, zero weight decay, StepLR
 at epoch 40 with gamma 0.1, seed 42, 2D Dice-CE weight 2, and mesh BCE weight 1.
 There is no early stopping. Zero-padded rows are excluded from mesh loss, and
-training patches require at least 50 positive label pixels. Validation mesh
+training and validation patches require at least 50 positive label pixels;
+test prediction keeps all patches. Validation mesh
 BCE selects `outputs/dentalpsam/best_model.pth`.
 
 The default mesh fusion variant is gated; `--mesh-fusion concat` defines a
 different checkpoint architecture. Frozen model loading infers the variant
 from checkpoint keys and is strict. Do not select a variant from test outcomes.
+
+## Test your trained model
+
+Use the three files from this training run as one weight bundle:
+
+| Bundle filename | Training output or initialization |
+| --- | --- |
+| `checkpoints/dentalpsam.pth` | `outputs/dentalpsam/best_model.pth` from stage 2 |
+| `checkpoints/branch3d.pth` | `outputs/3d/best.pth` used to prepare stage 2 inputs |
+| `checkpoints/sam.pth` | The same SAM ViT-B initialization used in stage 2 |
+
+Copy these files into a new bundle directory with the indicated filenames,
+then run `python test.py --data data/test --weights checkpoints --output results`.
+Keep the original training outputs. Do not substitute a different 3D checkpoint
+after DentalPSAM has been trained on its features.
 
 ## Options and scope
 

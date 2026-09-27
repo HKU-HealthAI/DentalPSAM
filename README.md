@@ -34,9 +34,13 @@ server uses Python 3.9, PyTorch 2.0, and an NVIDIA GPU.
 
 ## Test
 
-Place the authorized test data in `data/test` and compatible weights in:
+Arrange the authorized test data and its matching weights as follows:
 
 ```text
+data/test/
+  meshes/           # coloured, gingiva-removed PLY meshes
+  labels/           # matching PLY annotations, required for evaluation
+  mesh_ids.txt      # fixed test list supplied with the dataset
 checkpoints/
   dentalpsam.pth
   branch3d.pth
@@ -49,11 +53,17 @@ Task-trained checkpoints are not publicly released yet. Once available to you:
 python test.py --data data/test --weights checkpoints --output results
 ```
 
-The command prepares inputs as needed, predicts, and evaluates. Read
-`results/summary.txt` or `results/metrics.json` for the results.
-Testing does not require retraining.
+This one command prepares inputs as needed, predicts, and evaluates; no manual
+feature export is needed. Read `results/summary.txt` for the scores and 95% CIs,
+or `results/metrics.json` for machine-readable results. Stage progress appears
+in the terminal; detailed output is in `results/run.log`.
+Use a new output directory for each run. Input data are never overwritten.
+Testing does not require retraining. Use `python test.py --help` for options.
 
 ## Train
+
+Put participant-disjoint meshes and annotations in `data/train` and `data/val`,
+using the same layout as `data/test`. Train in the following order:
 
 ### 1. Train the 3D branch
 
@@ -68,8 +78,9 @@ python train.py --stage dentalpsam --data data \
   --branch-checkpoint outputs/3d/best.pth --output outputs/dentalpsam
 ```
 
-Place SAM initialization at `checkpoints/sam.pth`. The second stage prepares
-3D inputs from the first stage's checkpoint automatically.
+Place SAM initialization at `checkpoints/sam.pth` before stage 2. Stage 1 saves
+`outputs/3d/best.pth`; stage 2 prepares its 3D inputs automatically and saves
+`outputs/dentalpsam/best_model.pth`.
 See [Training](docs/TRAINING.md) for prerequisites and options.
 
 ## MICCAI results

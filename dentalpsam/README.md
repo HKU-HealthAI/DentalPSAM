@@ -17,6 +17,12 @@ In [model.py](model.py), `LSTMModel` encodes the mesh sequence and `MeshEncoder`
 uses the vendored `TwoWayTransformer` to construct geometric prompt features.
 These features enter `DentalPSAM.forward()` through the mask decoder.
 
+The frozen model in `branch3d/` prepares one auxiliary score per triangle before
+DentalPSAM runs. Inside `model.py`, `MeshEncoder` builds geometric prompts for
+the 2D branch, while `MeshDecoder` uses the shared 2D decoder features to predict
+mesh logits. The final 2D/3D probability fusion happens in `evaluation.py`,
+after predictions are restored to the original faces—not inside the BMT.
+
 ## Where to start
 
 | What you want to understand | Source |

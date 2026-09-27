@@ -1,48 +1,22 @@
 """Export DentalPSAM 2D and 3D probabilities for a fixed mesh list."""
 
-
 from __future__ import annotations
 
-
 import argparse
-
-
 import hashlib
-
-
 import json
-
-
 import platform
-
-
 import sys
-
-
 from pathlib import Path
 
-
 import cv2
-
-
 import numpy as np
-
-
 import torch
-
-
 from patchify import unpatchify
 
-
 from dentalpsam.checkpoints import load_dentalpsam
-
-
 from dentalpsam.data import SAMDataset, load_and_patchify_png_permesh
-
-
 from dentalpsam.mesh_targets import binary_mesh_targets, valid_mesh_point_mask
-
-
 from dentalpsam.prediction_io import (
     load_face_orders,
     make_dataloader,
@@ -53,7 +27,9 @@ from dentalpsam.prediction_io import (
 
 PREDICTION_THRESHOLD = 0.5
 
-
+# The loader emits six upper, eight inner, then eight outer patches. These
+# slices reconstruct the view images; face_order metadata separately restores
+# mesh rows. Neither operation may sort patches or faces by their predictions.
 VIEW_SLICES = {
     0: ("up", slice(0, 6), (2, 3, 256, 256), (512, 768)),
     1: ("in", slice(6, 14), (1, 8, 256, 256), (256, 2048)),

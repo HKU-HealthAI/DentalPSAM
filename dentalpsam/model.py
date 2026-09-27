@@ -1,3 +1,7 @@
+# Reading order: DentalPSAM.forward -> MeshEncoder (BMT prompts) -> MaskDecoder
+# (2D prediction) -> MeshDecoder (appearance-enhanced 3D prediction).
+# The pretrained 3D feature generator lives in branch3d/; it supplies the last
+# input channel, not ground truth. See README.md for the paper-to-code mapping.
 from typing import Any, List, Optional, Tuple, Type
 
 import numpy as np
@@ -65,6 +69,8 @@ class DentalPSAM(nn.Module):
             SOTA_mesh: padded mesh tensor with shape ``[B, 6000, 10]``.
             return_intermediate: when True, also return intermediate features.
         """
+        # 1. Image branch: RGB [B, 3, 256, 256] in 0-255 -> SAM [B, 256, 64, 64].
+        # Keep the checkpoint's nearest-neighbour resize and SAM preprocessing.
         image = self.resize(image)
         input_images = self.preprocess(image)
         image_embeddings = self.image_encoder(input_images)
@@ -72,6 +78,9 @@ class DentalPSAM(nn.Module):
             masks=None,
         )
 
+        # 2. BMT: ordered mesh rows [B, 6000, 10] -> dense geometric prompts.
+        # Padding is part of the retained encoder input; masking belongs to
+        # losses/output restoration, not a reordered or shortened LSTM sequence.
         if return_intermediate:
             mesh_input, dense_mask, mesh_embeddings = self.mesh_encoder(
                 SOTA_mesh,
@@ -85,6 +94,8 @@ class DentalPSAM(nn.Module):
                 return_intermediate=False,
             )
 
+        # 3. Add geometry to the image decoder. Its shared appearance features
+        # feed the mesh decoder as well as the 2D mask prediction.
         low_res_masks, iou_predictions, src = self.mask_decoder(
             image_embeddings=image_embeddings,
             image_pe=self.embeddings.get_dense_pe(),
@@ -97,6 +108,9 @@ class DentalPSAM(nn.Module):
             mask_embeddings=src,
         )
 
+        # Logits, not hard labels: pred_masks [B, 1, 256, 256], pred_mesh
+        # [B, 6000, 1]. Inference handles sigmoid and restoration to mesh faces;
+        # the evaluator alone performs the fixed 2D/3D probability fusion.
         outputs = {
             "pred_masks": low_res_masks,
             "iou_predictions": iou_predictions,
@@ -151,12 +165,16 @@ class MeshEncoder(nn.Module):
     def forward(self, sota_mesh, image_pe, return_intermediate=False):
         """Encode a mesh patch into SAM-compatible dense prompt features."""
         bs = self._get_batch_size(sota_mesh)
+        # Summarize the face sequence into 256 geometry tokens of width 256.
         mesh_embeddings = self.mesh_embedding(sota_mesh).reshape(
             -1,
             self.num_mesh_point,
             self.mask_shape[0],
         )
 
+        # Learnable memory is a 64 x 64 grid with 256 channels. Two-way
+        # attention exchanges information with the geometry tokens; the grid
+        # output is reshaped to SAM's dense-prompt tensor [B, 256, 64, 64].
         mask_embeddings = self.mask_tokens.weight.reshape(
             1,
             -1,
@@ -233,6 +251,8 @@ class MeshDecoder(nn.Module):
         """Decode per-face plaque logits from mesh features and mask embeddings."""
         _bs = self._get_batch_size(mesh_embeddings)
 
+        # Triangle XYZ (three vertices x three coordinates) -> 256 features
+        # per face. Keep the named gated/concat variants and their state keys.
         mesh_pos = self.mlp(mesh_embeddings[:, :, :9])
         # Channel 9 is an upstream auxiliary score in SOTA_mesh, not the
         # supervised label_mesh target. Keep the arithmetic unchanged for
@@ -248,6 +268,9 @@ class MeshDecoder(nn.Module):
             )
             mesh_features = torch.mul(expanded_auxiliary_score, mesh_pos)
 
+        # Compress shared 2D decoder features to [B, 256, 1], then take one
+        # feature dot product per face. Despite its historical name, the
+        # 'upscaling' block here reduces the spatial dimensions (64 -> 16).
         mask_embeddings = self.upscaling(mask_embeddings).flatten(2).permute(0, 2, 1)
         mesh_pred = mesh_features @ mask_embeddings
         return mesh_pred, None

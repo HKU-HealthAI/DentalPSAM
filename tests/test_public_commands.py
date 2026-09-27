@@ -80,3 +80,50 @@ def test_joint_training_minimal_command(monkeypatch):
     )
     assert received[0].sam_checkpoint == Path("checkpoints/sam.pth")
     assert received[0].branch_checkpoint == Path("outputs/3d/best.pth")
+
+
+@pytest.mark.parametrize("stage", ["3d", "dentalpsam"])
+def test_training_input_errors_explain_the_problem(monkeypatch, capsys, stage):
+    from dentalpsam import workflows
+
+    def invalid_split(args):
+        raise ValueError("Training and validation participants overlap")
+
+    monkeypatch.setattr(workflows, "train_model", invalid_split)
+    with pytest.raises(SystemExit) as stopped:
+        train_main(["--stage", stage, "--data", "data", "--output", "outputs/run"])
+    assert stopped.value.code == 2
+    error = capsys.readouterr().err
+    assert "participants overlap" in error and "Traceback" not in error
+
+
+def test_testing_input_errors_explain_the_problem(monkeypatch, capsys):
+    from dentalpsam import workflows
+
+    def invalid_list(args):
+        raise ValueError("Mesh list contains duplicate IDs")
+
+    monkeypatch.setattr(workflows, "test_model", invalid_list)
+    with pytest.raises(SystemExit) as stopped:
+        run_test_command(["--data", "data/test", "--weights", "weights", "--output", "results"])
+    assert stopped.value.code == 2
+    error = capsys.readouterr().err
+    assert "duplicate IDs" in error and "Traceback" not in error
+
+
+def test_test_help_explains_files_and_outputs(capsys):
+    with pytest.raises(SystemExit) as stopped:
+        run_test_command(["--help"])
+    assert stopped.value.code == 0
+    help_text = capsys.readouterr().out
+    for text in ("mesh_ids.txt", "summary.txt", "run.log", "Advanced overrides"):
+        assert text in help_text
+
+
+@pytest.mark.parametrize("stage,checkpoint", [("3d", "best.pth"), ("dentalpsam", "best_model.pth")])
+def test_training_help_explains_defaults_and_checkpoint(capsys, stage, checkpoint):
+    with pytest.raises(SystemExit) as stopped:
+        train_main(["--stage", stage, "--help"])
+    assert stopped.value.code == 0
+    help_text = capsys.readouterr().out
+    assert checkpoint in help_text and "default: 50" in help_text

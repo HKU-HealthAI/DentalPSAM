@@ -26,11 +26,16 @@ data/
 ```
 
 `train/` and `val/` use the same mesh and annotation layout. Training receives
-`--data data`; testing receives `--data data/test`.
+`--data data`; testing receives `--data data/test`. Testing requires annotations
+because the command runs evaluation as well as prediction; this is not an
+unlabelled-scan inference interface.
 
 `mesh_ids.txt` is the fixed evaluation list, one six-digit mesh identifier per
 line. The first four digits identify a participant, and suffixes `01` / `02`
 identify their arches. No cases are automatically added, filtered, or replaced.
+Use the evaluation list supplied with the dataset, not a new list assembled
+from whichever files happen to be present. Training uses all labelled meshes
+in the declared `train/` and `val/` directories rather than `mesh_ids.txt`.
 Keep all arches and views from one participant in the same split. Never use
 test or external evaluation data for checkpoint or threshold selection.
 
@@ -88,3 +93,15 @@ The single default evaluator is the original equal-triangle paper protocol:
 fixed 0.5/0.5 fusion, strict `> 0.5`, and mesh-macro estimates with
 participant-clustered confidence intervals. It is not area-weighted evaluation.
 This software contract does not itself establish reproduction of paper values.
+
+## If a command stops
+
+| Message or symptom | What to check |
+| --- | --- |
+| Missing test list | Place the supplied `mesh_ids.txt` inside `data/test`. |
+| Missing checkpoint | Check the three filenames in `checkpoints/` and that the weights belong to the same model run. |
+| Incomplete prepared inputs | Supply all five `processed/` subdirectories. If you intend to regenerate inputs, explicitly pass `--branch-checkpoint checkpoints/branch3d.pth`; the new files stay under the result directory. |
+| Output already exists | Choose a new `--output` directory; previous results are not overwritten. |
+| Training and validation participants overlap | Correct the split assignment so every participant belongs to only one split. Do not drop cases based on performance. |
+
+Detailed inference and evaluation messages are saved in `results/run.log`.

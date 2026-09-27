@@ -9,7 +9,15 @@ from dentalpsam.arguments import branch3d_train_parser, dentalpsam_train_parser
 
 def train_main(argv=None):
     selector = argparse.ArgumentParser(
-        description="Train the 3D branch, then DentalPSAM.", add_help=False
+        description="Train the 3D branch, then DentalPSAM.",
+        add_help=False,
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog=(
+            "Stage 1: python train.py --stage 3d --data data --output outputs/3d\n"
+            "Stage 2: python train.py --stage dentalpsam --data data\n"
+            "           --branch-checkpoint outputs/3d/best.pth --output outputs/dentalpsam\n"
+            "See docs/TRAINING.md for data preparation and checkpoint requirements."
+        ),
     )
     selector.add_argument("--stage", choices=("3d", "dentalpsam"), required=True)
     tokens = sys.argv[1:] if argv is None else argv
@@ -44,21 +52,28 @@ def train_main(argv=None):
 
     try:
         train_model(args)
-    except (FileNotFoundError, FileExistsError, NotADirectoryError) as error:
+    except (FileNotFoundError, FileExistsError, NotADirectoryError, ValueError) as error:
         parser.error(str(error))
 
 
 def test_main(argv=None):
     parser = argparse.ArgumentParser(
-        description="Run DentalPSAM prediction and paper evaluation."
+        description="Run DentalPSAM prediction and paper evaluation on labelled scans.",
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter,
+        epilog=(
+            "Example: python test.py --data data/test --weights checkpoints --output results. "
+            "Use a new output directory. Read summary.txt for scores and run.log for "
+            "details. Data layout: docs/DATASET.md."
+        ),
     )
-    parser.add_argument(
+    inputs = parser.add_argument_group("Data, weights, and results")
+    inputs.add_argument(
         "--data",
         type=Path,
         required=True,
-        help="One test split with meshes/ and labels/",
+        help="Test split containing meshes/, labels/, and mesh_ids.txt",
     )
-    weights = parser.add_mutually_exclusive_group(required=True)
+    weights = inputs.add_mutually_exclusive_group(required=True)
     weights.add_argument(
         "--weights",
         type=Path,
@@ -67,30 +82,33 @@ def test_main(argv=None):
     weights.add_argument(
         "--checkpoint", type=Path, help="Advanced: explicit DentalPSAM checkpoint file"
     )
-    parser.add_argument(
+    inputs.add_argument(
         "--output",
         type=Path,
         required=True,
         help="New result directory outside the input data",
     )
-    parser.add_argument(
+    runtime = parser.add_argument_group("Runtime")
+    runtime.add_argument("--device", default="cuda:0", help="PyTorch device")
+    runtime.add_argument("--num-workers", type=int, default=0, help="DataLoader workers")
+    advanced = parser.add_argument_group("Advanced overrides")
+    advanced.add_argument(
         "--sam-checkpoint", type=Path, help="Advanced: override SAM initialization"
     )
-    parser.add_argument(
+    advanced.add_argument(
         "--branch-checkpoint",
         "--3d-checkpoint",
         dest="branch_checkpoint",
         type=Path,
         help="Advanced: explicitly regenerate inputs with these 3D weights",
     )
-    parser.add_argument(
+    advanced.add_argument(
         "--mesh-list", type=Path, help="Advanced: override DATA/mesh_ids.txt"
     )
-    parser.add_argument("--expected-count", type=int)
-    parser.add_argument("--device", default="cuda:0")
-    parser.add_argument("--num-workers", type=int, default=0)
-    parser.add_argument("--bootstrap-reps", type=int, default=10000)
-    parser.add_argument("--seed", type=int, default=42)
+    advanced.add_argument("--expected-count", type=int, help="Assert fixed test-list size")
+    advanced.add_argument("--bootstrap-reps", type=int, default=10000,
+                          help="Participant bootstrap repetitions for confidence intervals")
+    advanced.add_argument("--seed", type=int, default=42, help="Bootstrap random seed")
     args = parser.parse_args(argv)
     if args.weights is not None:
         args.checkpoint = args.weights / "dentalpsam.pth"
@@ -99,5 +117,5 @@ def test_main(argv=None):
 
     try:
         test_model(args)
-    except (FileNotFoundError, FileExistsError, NotADirectoryError) as error:
+    except (FileNotFoundError, FileExistsError, NotADirectoryError, ValueError) as error:
         parser.error(str(error))

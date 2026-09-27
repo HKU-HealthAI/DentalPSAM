@@ -8,6 +8,7 @@ from argparse import Namespace
 from contextlib import redirect_stdout
 import json
 from pathlib import Path
+import sys
 
 from dentalpsam._layout import PROCESSED_NAMES, SplitLayout
 
@@ -123,6 +124,7 @@ def train_model(args):
             else root
         )
         if branch is not None:
+            print(f"Preparing {kind} views and frozen 3D features...", flush=True)
             mesh_list = workspace / f"{kind}_mesh_ids.txt"
             mesh_list.write_text("".join(name + "\n" for name in ids))
             source = prepare_split(
@@ -134,6 +136,8 @@ def train_model(args):
         from dentalpsam.branch3d.training import run_training
     else:
         from dentalpsam.training import run_training
+    print(f"Training {'the 3D branch' if args.stage == '3d' else 'DentalPSAM'}: {target}",
+          flush=True)
     run_training(args)
 
 
@@ -156,20 +160,30 @@ def test_model(args):
         args.branch_checkpoint = weights / "branch3d.pth"
     mesh_list = args.mesh_list or data / "mesh_ids.txt"
     sam = args.sam_checkpoint or args.checkpoint.parent / "sam_vit_b_01ec64.pth"
-    for path in (args.checkpoint, sam, mesh_list):
+    for role, path in (("DentalPSAM checkpoint", args.checkpoint),
+                       ("SAM initialization", sam), ("Test list", mesh_list)):
         if not path.is_file():
-            raise FileNotFoundError(path)
+            raise FileNotFoundError(f"{role} not found: {path}")
     ids = read_mesh_ids(mesh_list)
     if args.expected_count is not None and len(ids) != args.expected_count:
         raise ValueError("Fixed mesh list does not match --expected-count")
     if args.branch_checkpoint is not None and not args.branch_checkpoint.is_file():
-        raise FileNotFoundError(args.branch_checkpoint)
+        raise FileNotFoundError(f"3D branch checkpoint not found: {args.branch_checkpoint}")
     output = fresh_directory(args.output, [data])
     print(
         f"DentalPSAM: evaluating {len(ids)} meshes; progress log: {output / 'run.log'}",
         flush=True,
     )
+    # Keep detailed library output in the log, but show the three main stages
+    # on the original console so a long preparation step does not look idle.
+    console = sys.stdout
     with (output / "run.log").open("w") as log, redirect_stdout(log):
+        def progress(message):
+            print(message, file=console, flush=True)
+            print(message, flush=True)
+
+        progress("[1/3] Preparing model inputs" if not prepared
+                 else "[1/3] Checking prepared model inputs")
         data = layout.legacy_view(output / ".inputs", include_processed=prepared)
         if args.branch_checkpoint is not None:
             data = prepare_split(
@@ -186,6 +200,7 @@ def test_model(args):
                     data / "manual_2D" / old, target_is_directory=True
                 )
         inspect_split(data / "manual_2D", participant_id_prefix_length=4)
+        progress("[2/3] Running DentalPSAM prediction")
         predict_split(
             Namespace(
                 checkpoint=args.checkpoint,
@@ -199,6 +214,7 @@ def test_model(args):
                 num_workers=args.num_workers,
             )
         )
+        progress("[3/3] Evaluating mesh predictions")
         evaluate_predictions(
             Namespace(
                 data_dir=data,
