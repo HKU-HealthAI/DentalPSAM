@@ -2,9 +2,10 @@
 
 ## Required weights
 
-- `sam_vit_b_01ec64.pth`: SAM ViT-B initialization, separate from task weights.
+- `sam.pth`: SAM ViT-B initialization, separate from task weights; use the
+  compatible `sam_vit_b_01ec64.pth` contents under this bundle filename.
 - `dentalpsam.pth`: trained DentalPSAM state dictionary.
-- `3d_branch.pth`: frozen mesh feature weights, needed only when generating
+- `branch3d.pth`: frozen mesh feature weights, needed only when generating
   inputs from PLY or starting the two-stage training workflow.
 
 Weights are not redistributed here. Task checkpoint release URLs and final
@@ -28,7 +29,7 @@ unmodified SAM package during installation or restructuring.
 
 The public workflow uses 2D branch, 3D branch, fusion, and DentalPSAM. The
 upstream geometry/color feature generator retains the internal `TSGCNet`
-class and package names and its original attribution. It supplies the tenth
+class name inside `dentalpsam.branch3d` and its original attribution. It supplies the tenth
 column of the prepared mesh input. This is not DentalPSAM's own mesh encoder
 or decoder, and renaming the workflow does not imply a new architecture.
 

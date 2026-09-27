@@ -30,22 +30,27 @@ These items record a source/document inspection, not a completed runtime gate.
 
 ## Verification required on the final candidate
 
-- [ ] Run every public command's `--help` without private data.
-- [ ] Run `bash tests/run_checks.sh` before and after structural changes.
-- [ ] Run `pytest -q` from a clean checkout.
+- [x] Run every public command's `--help` without private data.
+- [x] Run `bash tests/run_checks.sh` before and after structural changes.
+- [x] Run `pytest -q` from a clean checkout.
+- [x] Build a wheel containing only `dentalpsam` and distribution metadata.
 - [ ] Confirm original inputs/outputs and both checkpoint variants remain
   compatible on the designated validation server.
-- [ ] Scan the final Git index for patient artifacts, private paths, and
+- [x] Scan the Git index for patient artifacts, private paths, and
   credentials, and verify that a clean checkout contains the documented scripts.
 - [ ] Have a reader unfamiliar with the code perform the five-minute check below.
 
-Current status: **pending final verification**, not accepted. Earlier server
-checks covered eight regression suites; an intermediate structural candidate
-also passed 53 pytest checks. These do not certify the final source revision.
-The [CPU workflow for 1d75106](https://github.com/HKU-HealthAI/DentalPSAM/actions/runs/36313424733)
-passed editable installation, compilation, and pytest on a fresh GitHub runner.
-This does not replace private-checkpoint server checks. The demonstration
-program from that earlier revision was subsequently removed at author request.
+Current status: **CPU checks passed; private-checkpoint and reader checks
+pending**. The [pre-change workflow for 6eea823](https://github.com/HKU-HealthAI/DentalPSAM/actions/runs/36313653347)
+passed the original regression command. The
+[public-surface workflow for 676e8de](https://github.com/HKU-HealthAI/DentalPSAM/actions/runs/36314319661)
+passed editable installation, compilation, 76 pytest checks, all eight original
+regression suites, command-help checks, and wheel inspection on a fresh runner.
+This includes exact tensor equality through the directory adapter and pinned
+numerical-source checks. Model and UV source files were not restructured.
+The demonstration program was removed at author request; only unit/regression
+test fixtures remain, not a generated-data example or a model-quality claim.
+These CPU checks do not replace private-checkpoint server verification.
 The SSH jump route was unavailable during the latest final-candidate attempt.
 No training or paper-metric optimization was launched to work around it.
 

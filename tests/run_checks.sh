@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Run synthetic regressions and CLI imports in the selected Python environment.
+# Run numerical regressions and CLI imports in the selected Python environment.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 validation_python="${1:-python}"
