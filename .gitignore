@@ -24,6 +24,8 @@ __pycache__/
 credentials*
 secrets*
 data/
+!scripts/data/
+!scripts/data/prepare_views.py
 splits/
 Raw/
 derived/
@@ -39,4 +41,7 @@ wandb/
 venv/
 .pytest_cache/
 .mypy_cache/
+*.egg-info/
+build/
+dist/
 .DS_Store

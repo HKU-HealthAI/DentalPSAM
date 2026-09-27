@@ -1,38 +1,31 @@
-#!/usr/bin/env python3
 """Validate a frozen DentalPSAM checkpoint on a declared validation split."""
+
 
 from __future__ import annotations
 
+
 import argparse
+
+
 import json
+
+
 from pathlib import Path
 
+
 import monai
+
+
 import torch
 
+
 from dentalpsam.checkpoints import load_dentalpsam
-from train_dentalpsam import make_loader, run_epoch, sha256_file
 
 
-def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--checkpoint", type=Path, required=True)
-    parser.add_argument("--sam-checkpoint", type=Path, required=True)
-    parser.add_argument("--val-dir", type=Path, required=True)
-    parser.add_argument("--output", type=Path, required=True)
-    parser.add_argument("--batch-size", type=int, default=4)
-    parser.add_argument("--num-workers", type=int, default=4)
-    parser.add_argument("--min-positive-pixels", type=int, default=50)
-    parser.add_argument("--image-loss-weight", type=float, default=2.0)
-    parser.add_argument("--mesh-loss-weight", type=float, default=1.0)
-    parser.add_argument("--target-threshold", type=float, default=0.5)
-    parser.add_argument("--seed", type=int, default=42)
-    parser.add_argument("--device", default="cuda:0")
-    return parser.parse_args()
+from dentalpsam.training import make_loader, run_epoch, sha256_file
 
 
-def main() -> None:
-    args = parse_args()
+def validate_checkpoint(args) -> None:
     checkpoint = args.checkpoint.expanduser().resolve()
     sam_checkpoint = args.sam_checkpoint.expanduser().resolve()
     val_dir = args.val_dir.expanduser().resolve()
@@ -76,7 +69,3 @@ def main() -> None:
     output.parent.mkdir(parents=True, exist_ok=True)
     output.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     print(json.dumps(metrics, sort_keys=True))
-
-
-if __name__ == "__main__":
-    main()

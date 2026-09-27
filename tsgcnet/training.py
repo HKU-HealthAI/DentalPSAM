@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """Train TSGCNet with patient-disjoint, area-weighted model selection.
 
 The upstream TSGCNet dataloader pads a 15,999-face mesh by repeating its last
@@ -8,21 +7,46 @@ physical-area plaque IoU across validation participants.  Test and External
 directories are never accepted as command-line inputs.
 """
 
+
 from __future__ import annotations
 
+
 import argparse
+
+
 import csv
+
+
 import hashlib
+
+
 import json
+
+
 import os
+
+
 import random
+
+
 from collections import defaultdict
+
+
 from pathlib import Path
+
+
 from typing import Any
 
+
 import numpy as np
+
+
 import torch
+
+
 from plyfile import PlyData
+
+
 from torch.utils.data import DataLoader
 
 
@@ -178,24 +202,7 @@ def write_csv(path: Path, rows: list[dict[str, Any]]) -> None:
         writer.writerows(rows)
 
 
-def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--train-dir", type=Path, required=True)
-    parser.add_argument("--val-dir", type=Path, required=True)
-    parser.add_argument("--out-dir", type=Path, required=True)
-    parser.add_argument("--device", default="cuda:0")
-    parser.add_argument("--epochs", type=int, default=50)
-    parser.add_argument("--patience", type=int, default=12)
-    parser.add_argument("--learning-rate", type=float, default=1e-4)
-    parser.add_argument("--weight-decay", type=float, default=1e-5)
-    parser.add_argument("--plaque-class-weight", type=float, default=1.0)
-    parser.add_argument("--seed", type=int, default=42)
-    parser.add_argument("--k", type=int, default=12)
-    return parser.parse_args()
-
-
-def main() -> None:
-    args = parse_args()
+def run_training(args) -> None:
     args.train_dir = args.train_dir.expanduser().resolve()
     args.val_dir = args.val_dir.expanduser().resolve()
     args.out_dir = args.out_dir.expanduser().resolve()
@@ -333,9 +340,9 @@ def main() -> None:
         "source": {
             "trainer": str(Path(__file__).resolve()),
             "trainer_sha256": sha256(Path(__file__).resolve()),
-            "model_sha256": sha256(Path(__file__).parent / "tsgcnet" / "model.py"),
-            "dataloader_sha256": sha256(Path(__file__).parent / "tsgcnet" / "data.py"),
-            "utils_sha256": sha256(Path(__file__).parent / "tsgcnet" / "utils.py"),
+            "model_sha256": sha256(Path(__file__).parent / "model.py"),
+            "dataloader_sha256": sha256(Path(__file__).parent / "data.py"),
+            "utils_sha256": sha256(Path(__file__).parent / "utils.py"),
         },
         "checkpoint": str(checkpoint),
         "checkpoint_sha256": sha256(checkpoint),
@@ -344,7 +351,3 @@ def main() -> None:
         json.dumps(manifest, indent=2, sort_keys=True) + "\n",
         encoding="utf-8",
     )
-
-
-if __name__ == "__main__":
-    main()

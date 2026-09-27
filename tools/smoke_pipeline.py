@@ -98,7 +98,7 @@ def main():
     try:
         run(
             "uv",
-            "prepare_uv_views.py",
+            "scripts/data/prepare_views.py",
             [
                 "--origin-dir",
                 source / "origin",
@@ -112,7 +112,7 @@ def main():
         )
         run(
             "tsgcnet",
-            "export_tsgcnet_features.py",
+            "scripts/branch3d/export_features.py",
             [
                 "--checkpoint",
                 args.tsgcnet_checkpoint,
@@ -147,7 +147,7 @@ def main():
         )
         run(
             "prediction",
-            "predict_dentalpsam.py",
+            "scripts/dentalpsam/predict.py",
             [
                 "--checkpoint",
                 args.dentalpsam_checkpoint,
@@ -167,7 +167,7 @@ def main():
         )
         run(
             "evaluation",
-            "evaluate_dentalpsam.py",
+            "scripts/dentalpsam/evaluate.py",
             [
                 "--data-dir",
                 derived,

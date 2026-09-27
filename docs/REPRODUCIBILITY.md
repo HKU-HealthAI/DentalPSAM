@@ -29,7 +29,9 @@ external directory.
 
 The public environment specification is `environment.yml`. PyTorch,
 torchvision, and the CUDA runtime are installed through Conda; direct Python
-dependencies are pinned in `requirements.txt`. This is a reference environment,
+dependencies are pinned in `requirements-validated.txt`. The package dependency
+ranges in `pyproject.toml` are separate installation bounds, not a full tested
+version matrix. This is a reference environment,
 not a fully locked set of transitive dependencies. Fresh-environment creation
 has not yet been verified; the execution checks used the existing environment
 below. Installing a newer dependency stack is a separate compatibility test.
@@ -47,9 +49,9 @@ manifest.
 
 ## Determinism
 
-`train_dentalpsam.py --deterministic` seeds Python, NumPy, PyTorch, CUDA, and
+`train.py --stage dentalpsam --deterministic` seeds Python, NumPy, PyTorch, CUDA, and
 DataLoader workers and requests deterministic PyTorch algorithms with warnings
-for unsupported kernels. `train_tsgcnet.py` enables the same deterministic
+for unsupported kernels. `train.py --stage 3d` enables the same deterministic
 policy. Exact cross-version or cross-GPU bitwise identity is not promised.
 
 ## Experimental separation
@@ -64,10 +66,10 @@ policy. Exact cross-version or cross-GPU bitwise identity is not promised.
 
 ## Training compatibility boundary
 
-The main training workflow consumes prepared inputs from a fixed 3D feature
-checkpoint. It does not invoke a separate TSGCNet training run. The standalone
-TSGCNet scripts are for additional experiments, not prerequisites for testing
-or training DentalPSAM with the existing features.
+The main DentalPSAM training workflow consumes prepared inputs from a fixed
+3D feature checkpoint. It does not retrain that generator implicitly.
+`train.py --stage 3d` exposes that separate stage for training from scratch;
+testing or training DentalPSAM with existing prepared inputs does not require it.
 
 The clean training entry points are explicit, validation-only protocols;
 they are not verbatim copies of the historical trainers. In particular, the

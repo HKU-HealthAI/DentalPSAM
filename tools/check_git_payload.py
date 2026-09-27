@@ -26,7 +26,11 @@ def main():
     for name in filter(None, paths):
         path = Path(name)
         reason = None
-        if path.suffix.lower() in forbidden_suffixes or set(path.parts) & forbidden_dirs:
+        # This source directory is not the private dataset directory.
+        public_data_script = name == "scripts/data/prepare_views.py"
+        if path.suffix.lower() in forbidden_suffixes or (
+            set(path.parts) & forbidden_dirs and not public_data_script
+        ):
             reason = "private/generated artifact"
         if path.name == ".env" or path.name.startswith(".env.") and path.name != ".env.example":
             reason = "environment credentials"

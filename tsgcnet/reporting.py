@@ -1,37 +1,47 @@
-#!/usr/bin/env python3
 """Evaluate one frozen TSGCNet checkpoint with original equal-triangle metrics.
 
 This performs no checkpoint selection or training. A fixed mesh list is
 required; no meshes are dropped. Repeated padding faces are excluded.
 """
 
+
 from __future__ import annotations
 
+
 import argparse
+
+
 import csv
+
+
 import json
+
+
 from pathlib import Path
 
+
 import numpy as np
+
+
 import torch
 
+
 from dentalpsam.checkpoints import extract_model_state
+
+
 from dentalpsam.evaluation import cluster_bootstrap, equal_face_metrics, read_mesh_ids
+
+
 from tools.evaluate_mesh import hash_named_files, read_ply_mesh, sha256_file
+
+
 from tsgcnet.data import PlyDataset
+
+
 from tsgcnet.model import TSGCNet
 
 
-def main():
-    parser = argparse.ArgumentParser(description=__doc__)
-    for name in ("data-dir", "checkpoint", "mesh-list", "output-dir"):
-        parser.add_argument(f"--{name}", type=Path, required=True)
-    parser.add_argument("--expected-count", type=int)
-    parser.add_argument("--device", default="cuda:0")
-    parser.add_argument("--k", type=int, default=12)
-    parser.add_argument("--bootstrap-reps", type=int, default=10000)
-    parser.add_argument("--seed", type=int, default=42)
-    args = parser.parse_args()
+def evaluate_checkpoint(args) -> None:
     source, output = args.data_dir.resolve(), args.output_dir.resolve()
     if source == output or source in output.parents:
         raise ValueError("Output must be outside the input data tree")
@@ -83,7 +93,7 @@ def main():
         writer = csv.DictWriter(handle, fieldnames=list(rows[0]))
         writer.writeheader()
         writer.writerows(rows)
-    root = Path(__file__).resolve().parent
+    root = Path(__file__).resolve().parents[1]
     manifest = {
         "status": "completed",
         "method": "TSGCNet frozen checkpoint",
@@ -101,7 +111,7 @@ def main():
         "source_sha256": {
             name: sha256_file(root / name)
             for name in (
-                "evaluate_tsgcnet.py",
+                "tsgcnet/reporting.py",
                 "tsgcnet/model.py",
                 "tsgcnet/data.py",
                 "tsgcnet/utils.py",
@@ -120,7 +130,3 @@ def main():
             json.dumps(value, indent=2, sort_keys=True) + "\n"
         )
     print(json.dumps(summary, indent=2), flush=True)
-
-
-if __name__ == "__main__":
-    main()

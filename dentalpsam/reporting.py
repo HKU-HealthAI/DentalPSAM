@@ -1,31 +1,30 @@
-#!/usr/bin/env python3
 """Evaluate MICCAI predictions with the original equal-triangle protocol."""
+
 
 from __future__ import annotations
 
+
 import argparse
+
+
 import csv
+
+
 import json
+
+
 from pathlib import Path
+
 
 from dentalpsam.evaluation import (
     cluster_bootstrap, equal_face_metrics, load_mesh_predictions, read_mesh_ids,
 )
+
+
 from tools.evaluate_mesh import hash_named_files, sha256_file
 
 
-def main():
-    parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--data-dir", type=Path, required=True)
-    parser.add_argument("--prediction-dir", type=Path, required=True)
-    parser.add_argument("--mesh-list", type=Path, required=True)
-    parser.add_argument("--output-dir", type=Path, required=True)
-    parser.add_argument("--fusion-weight-2d", type=float, default=0.5)
-    parser.add_argument("--threshold", type=float, default=0.5)
-    parser.add_argument("--bootstrap-reps", type=int, default=10000)
-    parser.add_argument("--seed", type=int, default=42)
-    parser.add_argument("--expected-count", type=int)
-    args = parser.parse_args()
+def evaluate_predictions(args) -> None:
     if not 0 <= args.fusion_weight_2d <= 1 or not 0 <= args.threshold <= 1:
         raise ValueError("Fusion weight and threshold must lie in [0, 1]")
     if args.bootstrap_reps < 1:
@@ -67,7 +66,7 @@ def main():
         "bootstrap_reps": args.bootstrap_reps, "seed": args.seed,
         "input_files": hash_named_files(files),
         "evaluator_sha256": sha256_file(Path(__file__).resolve()),
-        "metric_module_sha256": sha256_file(Path(__file__).parent / "dentalpsam/evaluation.py"),
+        "metric_module_sha256": sha256_file(Path(__file__).parent / "evaluation.py"),
     }
     output.mkdir(parents=True)
     with (output / "per_mesh_metrics.csv").open("w", newline="") as handle:
@@ -79,7 +78,3 @@ def main():
         (output / name).write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n")
     print(json.dumps({branch: {key: result[key] for key in ("plaque_iou", "plaque_dice", "accuracy")}
                       for branch, result in summary.items()}, indent=2))
-
-
-if __name__ == "__main__":
-    main()

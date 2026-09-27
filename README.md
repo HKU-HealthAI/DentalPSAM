@@ -1,158 +1,131 @@
 # DentalPSAM
 
-DentalPSAM combines rendered 2D views and 3D mesh features for dental-plaque
-segmentation. This repository contains the main model and its data preparation,
-training, prediction, and evaluation code. The stitching module is not included
-in this version.
+DentalPSAM combines a 2D branch and a 3D branch for dental-plaque segmentation.
+This repository provides the code for preparing inputs, testing trained
+checkpoints, and training the model.
 
 ## Dataset
 
-The dataset is being organized and is **not yet publicly available**.
-Please reach out to the authors for data access. Access conditions and release
-details will be provided when the dataset is ready; this repository does not
-currently distribute patient data or a public download link.
+The dataset used in this work is currently being organized and is not yet
+available for public release. Please **reach out to Dr. Deng or Haoning Jiang**
+regarding data access. No patient scans, annotations, or participant identifiers are
+distributed in this repository.
 
-The code expects preprocessed, gingiva-removed meshes with matching scan and
-annotation geometry. A prepared split has the following structure:
-
-```text
-data/
-  train/
-    origin/                 Colored PLY meshes
-    label/                  Plaque annotations on matching meshes
-    manual_2D/              Rendered views and aligned mesh features
-  val/
-    origin/
-    label/
-    manual_2D/
-  test/
-    origin/
-    label/
-    manual_2D/
-splits/
-  test.txt                  One mesh identifier per line
-```
-
-Participants must not overlap between training, validation, and test splits.
-The data format and preparation procedure are described in
-[Data preparation](docs/DATA_PIPELINE.md). Generated files are stored separately
-from original data. Gingival removal, downsampling, and uniform remeshing are
-not performed by the code in this repository.
+See [Dataset specification](docs/DATASET.md) for the actual file layout,
+annotations, preprocessing assumptions, and participant-level split rules.
+The code reads original data without overwriting it.
 
 ## Code
 
-The reference environment is Linux with Python 3.9.18, PyTorch 2.0.1, and
-CUDA 11.7. An NVIDIA GPU with a compatible driver is required for GPU execution.
+Install from the repository root in a Python 3.9–3.11 environment:
 
 ```bash
 git clone https://github.com/HKU-HealthAI/DentalPSAM.git
 cd DentalPSAM
-conda env create --file environment.yml
-conda activate dentalpsam
+python -m pip install -e .
 ```
 
-The environment specification pins direct dependencies to the versions used
-for verification. Fresh-environment installation has not yet been verified.
-Run the examples below from the repository root. To check dependencies and
-synthetic regression tests, run `bash tests/run_checks.sh`.
+Server compatibility checks use Python 3.9.18, PyTorch 2.0.1,
+CUDA 11.7, and an NVIDIA GPU. Dependency ranges are in `pyproject.toml`; the
+exact reference stack is in `environment.yml` and `requirements-validated.txt`.
+See [Quick start](docs/QUICKSTART.md) for environment setup.
 
 ### Testing
 
-Testing uses fixed pretrained weights and prepared 3D branch inputs. No
-additional training is required.
+**Without study data.** Try the CPU-only interface demo:
 
-Place your compatible weights in `checkpoints/`:
+```bash
+python examples/synthetic_sample/run.py --output outputs/synthetic_demo
+```
+
+This synthetic example verifies file layout, data loading, model-input
+construction, and reporting. It does not run the neural model or reproduce
+the paper's experimental results.
+
+**With study data and trained checkpoints.** Prepare the test split and weights as
+described in
+[Quick start](docs/QUICKSTART.md). Public task-checkpoint download links are not
+yet available; the repository does not contain pretrained weights.
+
+```bash
+python test.py \
+  --data data/test \
+  --checkpoint checkpoints/dentalpsam.pth \
+  --output outputs/test
+```
+
+By default, the command reads `data/test/mesh_ids.txt` and loads
+`sam_vit_b_01ec64.pth` beside the DentalPSAM checkpoint. Override these with
+`--mesh-list` and `--sam-checkpoint`. If the split contains preprocessed
+PLY pairs instead of prepared inputs, add `--3d-checkpoint` to generate the
+required inputs automatically in the new output directory.
+
+One command runs prediction, 2D-to-mesh reprojection, fixed 0.5/0.5 fusion, and
+the original **equal-triangle** evaluation. It writes:
 
 ```text
-checkpoints/
-  sam_vit_b_01ec64.pth       SAM ViT-B initialization
-  dentalpsam.pth            Trained DentalPSAM weights
-  3d_branch.pth             Only needed when generating mesh features from PLY
+outputs/test/
+  predictions/              Saved 2D and 3D probabilities
+  metrics.json              Both classes, branch/fusion metrics, and 95% CIs
+  summary.txt               Readable fused-result summary
+  evaluation/               Per-mesh results and provenance manifest
+  run.log                   Detailed execution log
 ```
 
-Public links for the task-trained weights are not yet available. A SAM
-checkpoint alone is insufficient. If `manual_2D/` is not already prepared,
-follow [Data preparation](docs/DATA_PIPELINE.md#prepare-a-split) first; this
-runs the fixed 3D feature branch, without retraining it.
-
-Generate 2D and 3D predictions:
-
-```bash
-python predict_dentalpsam.py \
-  --checkpoint checkpoints/dentalpsam.pth \
-  --sam-checkpoint checkpoints/sam_vit_b_01ec64.pth \
-  --data-dir data/test/manual_2D \
-  --mesh-list splits/test.txt \
-  --output-dir outputs/test_predictions \
-  --device cuda:0
-```
-
-Evaluate the saved predictions on the same mesh list:
-
-```bash
-python evaluate_dentalpsam.py \
-  --data-dir data/test \
-  --prediction-dir outputs/test_predictions \
-  --mesh-list splits/test.txt \
-  --output-dir outputs/test_metrics \
-  --fusion-weight-2d 0.5 --threshold 0.5 \
-  --bootstrap-reps 10000 --seed 42
-```
-
-Evaluation uses the original **equal-triangle** protocol, not area weighting:
-2D scores are reprojected onto faces and combined with 3D scores at fixed
-0.5/0.5 weights, with plaque defined by `score > 0.5`. Metrics are calculated
-per mesh and averaged; 95% confidence intervals resample participants with
-all their meshes. Missing predictions are reported as errors.
-
-Results are saved in `summary.json`, `per_mesh_metrics.csv`, and
-`evaluation_manifest.json`. Always use a new output directory. For the
-120-mesh MICCAI test list, add `--expected-count 120` to both commands.
-
-The code has passed bounded server-side compatibility and integration checks,
-but the MICCAI table values have **not yet been reproduced**. Measured results
-and remaining gaps are listed in [Server verification](docs/SERVER_VALIDATION.md);
-paper reference values are listed separately in [Paper results](docs/PAPER_RESULTS.md).
+For the fixed MICCAI test list, use `--expected-count 120`. The decision rule
+is strict `> 0.5`; confidence intervals resample participants with all their
+meshes. Area and vertex analyses are separate protocols, documented in
+[Evaluation](docs/EVALUATION.md).
 
 ### Training
 
-Prepare the training and validation inputs once, including the 3D branch
-features. The command below trains DentalPSAM directly; it does not launch
-additional upstream training. Use the same fixed feature checkpoint throughout
-an experiment.
+Testing does not require retraining. For a new training run, use two stages.
+The input root contains participant-disjoint `train/` and `val/` splits.
+
+**1. Train the 3D branch.** It learns mesh representations from geometry and
+scan colors, using participant-disjoint training and validation splits.
 
 ```bash
-python train_dentalpsam.py \
-  --train-dir data/train/manual_2D \
-  --val-dir data/val/manual_2D \
-  --sam-checkpoint checkpoints/sam_vit_b_01ec64.pth \
-  --save-dir outputs/dentalpsam_train \
-  --epochs 50 --batch-size 4 --learning-rate 1e-4 \
-  --seed 42 --deterministic --device cuda:0
+python train.py --stage 3d \
+  --data data --output outputs/3d_branch --epochs 50
 ```
 
-The default uses Adam, 2D Dice-CE loss, padding-masked 3D BCE loss, and
-checkpoint selection by validation mesh BCE. Training and validation
-participants must be disjoint; test labels are never used for selection.
-
-To validate a saved checkpoint:
+**2. Train DentalPSAM.** The command below uses the selected 3D checkpoint to
+prepare fixed branch inputs automatically, then trains DentalPSAM with SAM
+initialization:
 
 ```bash
-python validate_dentalpsam.py \
-  --checkpoint checkpoints/dentalpsam.pth \
+python train.py --stage dentalpsam \
+  --data data \
+  --3d-checkpoint outputs/3d_branch/best.pth \
   --sam-checkpoint checkpoints/sam_vit_b_01ec64.pth \
-  --val-dir data/val/manual_2D \
-  --output outputs/validation.json --device cuda:0
+  --output outputs/dentalpsam --epochs 50 --seed 42 --deterministic
 ```
 
-The model implementation is in `dentalpsam/`; the fixed 3D feature generator
-is in `tsgcnet/`. Testing infers the gated or concatenation variant from
-checkpoint keys and loads it strictly. New training defaults to the gated
-variant; `--mesh-fusion concat` selects the alternative. Training settings,
-compatibility limitations, and supplementary evaluation protocols are in
-[Reproducibility](docs/REPRODUCIBILITY.md).
+If inputs are already prepared, omit `--3d-checkpoint`. See
+[Training](docs/TRAINING.md) for validation, defaults, and protocol limitations.
+`python train.py --stage dentalpsam --help` lists the available options.
 
-For development, see [Contributing](CONTRIBUTING.md). Project licensing and
-third-party redistribution terms remain to be confirmed; see
-[Third-party notices](THIRD_PARTY_NOTICES.md). This source snapshot is not a
-formal dataset or model-weight release.
+The model, data loader, and shared training logic are in `dentalpsam/`.
+`train.py` and `test.py` are the main entry points; `scripts/` contains optional
+step-by-step commands. See [Model and checkpoints](docs/MODEL_AND_CHECKPOINTS.md)
+for the internal implementation and weight dependencies. `configs/` provides
+readable option examples; command-line arguments remain authoritative.
+
+For contributors:
+
+```bash
+python -m pip install -e ".[dev]"
+pytest -q
+bash tests/run_checks.sh
+```
+
+Code compatibility is checked separately from paper-result reproduction.
+The MICCAI table values have not yet been reproduced with the current traced
+artifacts. See [Reproducibility](docs/REPRODUCIBILITY.md),
+[server evidence](docs/SERVER_VALIDATION.md), and
+[paper reference values](docs/PAPER_RESULTS.md).
+
+Formal citation metadata and project licensing are awaiting author confirmation.
+This is not yet a formal dataset or model-weight release. Existing third-party
+attribution remains in [Third-party notices](THIRD_PARTY_NOTICES.md).

@@ -1,32 +1,34 @@
-#!/usr/bin/env python3
 """Validate a frozen TSGCNet checkpoint with original-triangle area weights."""
+
 
 from __future__ import annotations
 
+
 import argparse
+
+
 import json
+
+
 from pathlib import Path
 
+
 import torch
+
+
 from torch.utils.data import DataLoader
 
-from train_tsgcnet import MetadataCache, load_model_state, sha256, validation_metrics
+
+from tsgcnet.training import MetadataCache, load_model_state, sha256, validation_metrics
+
+
 from tsgcnet.data import PlyDataset
+
+
 from tsgcnet.model import TSGCNet
 
 
-def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--checkpoint", type=Path, required=True)
-    parser.add_argument("--val-dir", type=Path, required=True)
-    parser.add_argument("--output", type=Path, required=True)
-    parser.add_argument("--device", default="cuda:0")
-    parser.add_argument("--k", type=int, default=12)
-    return parser.parse_args()
-
-
-def main() -> None:
-    args = parse_args()
+def validate_checkpoint(args) -> None:
     checkpoint = args.checkpoint.expanduser().resolve()
     val_dir = args.val_dir.expanduser().resolve()
     output = args.output.expanduser().resolve()
@@ -65,7 +67,3 @@ def main() -> None:
     output.parent.mkdir(parents=True, exist_ok=True)
     output.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     print(json.dumps(metrics, sort_keys=True))
-
-
-if __name__ == "__main__":
-    main()

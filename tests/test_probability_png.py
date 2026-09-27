@@ -9,7 +9,7 @@ import cv2
 import numpy as np
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from predict_dentalpsam import write_probability_png
+from dentalpsam.inference import write_probability_png
 
 
 def main():

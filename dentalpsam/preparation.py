@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """Render the three DentalPSAM UV views and reconstruction metadata.
 
 Inputs are original and labelled PLY directories plus a fixed mesh list.
@@ -7,15 +6,27 @@ modified.  The numerical renderer is the historical DentalPSAM projection
 implementation, while this entry point adds validation and provenance.
 """
 
+
 from __future__ import annotations
 
+
 import argparse
+
+
 import hashlib
+
+
 import json
+
+
 from pathlib import Path
 
+
 import numpy as np
+
+
 import open3d as o3d
+
 
 from dentalpsam.uv_projection import render_single_mesh
 
@@ -50,17 +61,7 @@ def assert_matching_topology(origin_mesh: o3d.geometry.TriangleMesh,
         raise ValueError(f"Mesh has no triangle faces: {mesh_id}")
 
 
-def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--origin-dir", type=Path, required=True)
-    parser.add_argument("--label-dir", type=Path, required=True)
-    parser.add_argument("--mesh-list", type=Path, required=True)
-    parser.add_argument("--output-dir", type=Path, required=True)
-    return parser.parse_args()
-
-
-def main() -> None:
-    args = parse_args()
+def prepare_views(args) -> None:
     origin_dir = args.origin_dir.expanduser().resolve()
     label_dir = args.label_dir.expanduser().resolve()
     mesh_list = args.mesh_list.expanduser().resolve()
@@ -121,7 +122,7 @@ def main() -> None:
         "status": "completed",
         "mesh_count": len(mesh_ids),
         "input_file_set_sha256": input_digest.hexdigest(),
-        "renderer_sha256": sha256_file(Path(__file__).parent / "dentalpsam" / "uv_projection.py"),
+        "renderer_sha256": sha256_file(Path(__file__).parent / "uv_projection.py"),
         "raw_data_modified": False,
         "outputs": ["origin/*.png", "label/*.png", "info/*.npz"],
         "cases": cases,
@@ -129,7 +130,3 @@ def main() -> None:
     (output_dir / "projection_manifest.json").write_text(
         json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8"
     )
-
-
-if __name__ == "__main__":
-    main()

@@ -6,7 +6,8 @@ traceable. Source organization does not by itself establish paper reproduction.
 ## Git workflow
 
 1. Fetch and inspect `git status --short --branch` before making changes. Preserve
-   other contributors' work. Use a topic branch for subsequent changes.
+   other contributors' work. Keep the maintained history on `main`; do not create
+   extra development branches for this repository cleanup.
 2. Make focused commits with concrete subjects, for example
    `Preserve OpenCV rounding in probability maps` or
    `Document the fixed-checkpoint testing protocol`. Use the body to record

@@ -1,24 +1,51 @@
-#!/usr/bin/env python3
 """Train the checkpoint-compatible DentalPSAM model."""
+
 
 from __future__ import annotations
 
+
 import argparse
+
+
 import hashlib
+
+
 import json
+
+
 import platform
+
+
 import random
+
+
 import sys
+
+
 from pathlib import Path
 
+
 import monai
+
+
 import numpy as np
+
+
 import torch
+
+
 from torch.utils.data import DataLoader
 
+
 from dentalpsam.checkpoints import build_sam_vit_b
+
+
 from dentalpsam.data import SAMDataset, load_and_patchify_png
+
+
 from dentalpsam.model import DentalPSAM
+
+
 from dentalpsam.mesh_targets import (
     binary_mesh_intersection_union,
     binary_mesh_targets,
@@ -209,32 +236,7 @@ def run_epoch(
     }
 
 
-def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--train-dir", type=Path, required=True)
-    parser.add_argument("--val-dir", type=Path, required=True)
-    parser.add_argument("--sam-checkpoint", type=Path, required=True)
-    parser.add_argument("--save-dir", type=Path, required=True)
-    parser.add_argument("--epochs", type=int, default=50)
-    parser.add_argument("--batch-size", type=int, default=4)
-    parser.add_argument("--num-workers", type=int, default=4)
-    parser.add_argument("--learning-rate", type=float, default=1e-4)
-    parser.add_argument("--weight-decay", type=float, default=0.0)
-    parser.add_argument("--image-loss-weight", type=float, default=2.0)
-    parser.add_argument("--mesh-loss-weight", type=float, default=1.0)
-    parser.add_argument("--mesh-fusion", choices=("gated", "concat"), default="gated")
-    parser.add_argument("--save-every", type=int, default=2)
-    parser.add_argument("--min-positive-pixels", type=int, default=50)
-    parser.add_argument("--participant-id-prefix-length", type=int, default=4)
-    parser.add_argument("--target-threshold", type=float, default=0.5)
-    parser.add_argument("--seed", type=int, default=42)
-    parser.add_argument("--deterministic", action="store_true")
-    parser.add_argument("--device", default="cuda:0")
-    return parser.parse_args()
-
-
-def main() -> None:
-    args = parse_args()
+def run_training(args) -> None:
     positive_integers = (args.epochs, args.batch_size, args.save_every)
     if any(value < 1 for value in positive_integers) or args.num_workers < 0:
         raise ValueError("Epochs, batch size and save interval must be positive; workers cannot be negative.")
@@ -391,7 +393,3 @@ def main() -> None:
         "best_validation_mesh_loss": best_val_mesh_loss,
     })
     write_json(manifest_path, manifest)
-
-
-if __name__ == "__main__":
-    main()

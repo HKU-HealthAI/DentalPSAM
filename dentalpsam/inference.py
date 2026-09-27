@@ -1,23 +1,48 @@
-#!/usr/bin/env python3
 """Export DentalPSAM 2D and 3D probabilities for a fixed mesh list."""
+
 
 from __future__ import annotations
 
+
 import argparse
+
+
 import hashlib
+
+
 import json
+
+
 import platform
+
+
 import sys
+
+
 from pathlib import Path
 
+
 import cv2
+
+
 import numpy as np
+
+
 import torch
+
+
 from patchify import unpatchify
 
+
 from dentalpsam.checkpoints import load_dentalpsam
+
+
 from dentalpsam.data import SAMDataset, load_and_patchify_png_permesh
+
+
 from dentalpsam.mesh_targets import binary_mesh_targets, valid_mesh_point_mask
+
+
 from dentalpsam.prediction_io import (
     load_face_orders,
     make_dataloader,
@@ -27,6 +52,8 @@ from dentalpsam.prediction_io import (
 
 
 PREDICTION_THRESHOLD = 0.5
+
+
 VIEW_SLICES = {
     0: ("up", slice(0, 6), (2, 3, 256, 256), (512, 768)),
     1: ("in", slice(6, 14), (1, 8, 256, 256), (256, 2048)),
@@ -184,22 +211,7 @@ def predict_mesh(
     }
 
 
-def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--checkpoint", type=Path, required=True)
-    parser.add_argument("--sam-checkpoint", type=Path, required=True)
-    parser.add_argument("--data-dir", type=Path, required=True)
-    parser.add_argument("--mesh-list", type=Path, required=True)
-    parser.add_argument("--output-dir", type=Path, required=True)
-    parser.add_argument("--expected-count", type=int)
-    parser.add_argument("--target-threshold", type=float, default=0.5)
-    parser.add_argument("--device", default="cuda:0")
-    parser.add_argument("--num-workers", type=int, default=0)
-    return parser.parse_args()
-
-
-def main() -> None:
-    args = parse_args()
+def predict_split(args) -> None:
     if args.num_workers < 0:
         raise ValueError("--num-workers must be non-negative.")
     if not 0.0 <= args.target_threshold <= 1.0:
@@ -296,7 +308,7 @@ def main() -> None:
             "diagnostic_mesh_macro_means": diagnostic_means,
             "reported_result_boundary": (
                 "Diagnostics above are not the participant-level reported result; "
-                "run tools/evaluate_mesh.py on the saved probabilities."
+                "run the original evaluator or use the unified test.py workflow."
             ),
         }
     )
@@ -306,7 +318,3 @@ def main() -> None:
         {"per_mesh": results, **diagnostic_means},
     )
     print(json.dumps(diagnostic_means, sort_keys=True), flush=True)
-
-
-if __name__ == "__main__":
-    main()

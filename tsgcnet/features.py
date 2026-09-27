@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """Export a frozen TSGCNet checkpoint to DentalPSAM SOTA-mesh patches.
 
 This is a safe replacement for the historical ``pred_to_2d_new.py`` path.
@@ -7,21 +6,40 @@ probabilities and ground truth in separate files, and verifies that the three
 UV views form an exact partition of the original PLY faces.
 """
 
+
 from __future__ import annotations
 
+
 import argparse
+
+
 import hashlib
+
+
 import json
+
+
 from pathlib import Path
 
+
 import cv2
+
+
 import numpy as np
+
+
 import torch
+
+
 from plyfile import PlyData
 
 
 VIEWS = ("up", "in", "out")
+
+
 VIEW_SHAPES = {"up": (512, 768), "in": (256, 2048), "out": (256, 2048)}
+
+
 VIEW_PATCH_COUNTS = {"up": 6, "in": 8, "out": 8}
 
 
@@ -122,24 +140,7 @@ def rasterize(view: str, triangles: np.ndarray, uv_pixels: np.ndarray, scores: n
     return image
 
 
-def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--checkpoint", type=Path, required=True)
-    parser.add_argument("--data-dir", type=Path, required=True)
-    parser.add_argument(
-        "--info-dir",
-        type=Path,
-        help="UV reconstruction NPZ directory (default: DATA_DIR/manual_2D/info).",
-    )
-    parser.add_argument("--mesh-list", type=Path, required=True)
-    parser.add_argument("--out-dir", type=Path, required=True)
-    parser.add_argument("--device", default="cuda:0")
-    parser.add_argument("--k", type=int, default=12)
-    return parser.parse_args()
-
-
-def main() -> None:
-    args = parse_args()
+def export_features(args) -> None:
     args.checkpoint = args.checkpoint.expanduser().resolve()
     args.data_dir = args.data_dir.expanduser().resolve()
     args.info_dir = (
@@ -175,7 +176,7 @@ def main() -> None:
 
     for directory in ("SOTA_mesh", "label_mesh", "SOTA_pred", "scores"):
         (args.out_dir / directory).mkdir(parents=True, exist_ok=(directory != "SOTA_mesh"))
-    source_root = Path(__file__).parent
+    source_root = Path(__file__).resolve().parents[1]
     model_source = source_root / "tsgcnet" / "model.py"
     data_source = source_root / "tsgcnet" / "data.py"
     input_files = [args.checkpoint, args.mesh_list, model_source, data_source]
@@ -281,7 +282,3 @@ def main() -> None:
         json.dumps(manifest, indent=2, sort_keys=True) + "\n",
         encoding="utf-8",
     )
-
-
-if __name__ == "__main__":
-    main()

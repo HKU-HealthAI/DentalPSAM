@@ -1,8 +1,14 @@
 # Acceptance criteria
 
-All four requirements below must pass before calling the requested work
-complete. A Git push, successful imports, or a one-sample smoke test is not
-overall acceptance.
+This document separates repository usability from scientific reproduction.
+The current cleanup is a **Repository Release Gate**: clear Dataset, Testing,
+and two-stage Training instructions; working public commands; preserved
+scientific behavior; and no private artifacts in Git. Matching published
+metrics is a separate **Scientific Reproduction Gate**, not a cleanup condition.
+
+The structural candidate is not yet fully accepted: its final server regression
+rerun and clean-checkout checks remain pending. A Git push does not mark either
+gate passed. The scientific targets below are retained for later verification.
 
 ## 1. Clear code structure
 
@@ -16,7 +22,7 @@ overall acceptance.
 - Test the actual data flow on the server, including newly generated UV and
   mesh NPZ files, rather than relying only on `--help`.
 
-## 2. Results matching the MICCAI paper
+## Separate scientific gate: results matching the MICCAI paper
 
 The current requested scope excludes stitching. The target is the paper's
 `w/o Stitch` row: plaque IoU **0.547**, Dice **0.700**, OA **0.830**.
@@ -44,9 +50,9 @@ recovered, document the mismatch and missing provenance; mark this criterion
 ## 3. Detailed, usable README
 
 A new reader must be able to identify the intended model variant and run the
-workflow from the README: environment, pretrained/trained weights, directory
-layout, input/output schemas, UV generation, TSGCNet feature export, training,
-validation, prediction, and original-protocol evaluation. Explain prerequisites,
+workflow from the README: dataset access, environment, weights, testing,
+Stage 1 (3D branch), and Stage 2 (DentalPSAM). Keep optional intermediate
+commands and file schemas in the detailed documentation. Explain prerequisites,
 where files are written, known limitations, and expected outputs. Distinguish
 paper targets, measured results, diagnostics, and optional area analysis.
 
@@ -64,4 +70,5 @@ The [server verification record](SERVER_VALIDATION.md) establishes bounded
 inference compatibility, synthetic test coverage, and a fresh single-mesh
 generation/prediction/evaluation run. Complete-cohort measurements are also
 available, but do not match the paper targets. Overall paper-reproduction
-acceptance is therefore **not passed**.
+acceptance is therefore **not passed**. That numerical mismatch does not block
+the independent repository-readability gate.
