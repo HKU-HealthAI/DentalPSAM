@@ -1,2 +1,0 @@
-# Standard installation; dependency ranges are defined once in pyproject.toml.
--e .

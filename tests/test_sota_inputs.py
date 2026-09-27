@@ -9,8 +9,8 @@ import numpy as np
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from tests.test_evaluate_mesh import object_parts, write_binary_ply
-from tools.audit_sota_inputs import read_cached_scores
-from tools.evaluate_mesh import read_ply_mesh
+from dev.audit_sota_inputs import read_cached_scores
+from dev.evaluate_mesh import read_ply_mesh
 
 
 def main():

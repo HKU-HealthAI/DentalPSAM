@@ -7,7 +7,7 @@ upstream copyright headers. The Apache License 2.0 text is included at
 
 `dentalpsam/model.py` contains model components derived from Segment Anything
 and an MLP structure described in the historical source as adapted from
-MaskFormer. `tsgcnet/` is derived from the TSGCNet implementation associated
+MaskFormer. `dentalpsam/branch3d/` is derived from the TSGCNet implementation associated
 with:
 
 - L. Zhang et al., “TSGCNet: Discriminative Geometric Feature Learning With

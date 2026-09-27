@@ -24,8 +24,8 @@ __pycache__/
 credentials*
 secrets*
 data/
-!scripts/data/
-!scripts/data/prepare_views.py
+!dev/commands/data/
+!dev/commands/data/prepare_views.py
 splits/
 Raw/
 derived/

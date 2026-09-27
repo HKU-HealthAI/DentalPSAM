@@ -21,7 +21,7 @@ from dentalpsam.evaluation import (
 )
 
 
-from tools.evaluate_mesh import hash_named_files, sha256_file
+from dentalpsam.mesh_io import hash_named_files, sha256_file
 
 
 def evaluate_predictions(args) -> None:

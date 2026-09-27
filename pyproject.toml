@@ -29,8 +29,8 @@ dev = ["pytest>=7,<9", "build>=1,<2"]
 Repository = "https://github.com/HKU-HealthAI/DentalPSAM"
 
 [tool.setuptools.packages.find]
-include = ["dentalpsam*", "tsgcnet*", "tools*"]
-exclude = ["tests*", "examples*"]
+include = ["dentalpsam*"]
+exclude = ["tests*", "dev*", "reproducibility*"]
 
 [tool.setuptools.package-data]
 dentalpsam = ["segment_anything/README.md"]

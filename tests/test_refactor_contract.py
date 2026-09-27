@@ -32,6 +32,12 @@ def test_numerical_source_preserved(record):
     # Ignore that representational difference, not executable source changes.
     for child in ast.walk(node):
         child._fields = tuple(key for key in child._fields if key != "type_params")
+        # Normalize only the reviewed import relocations to the pinned source.
+        # Function bodies, class names and all numerical expressions stay pinned.
+        if isinstance(child, ast.ImportFrom) and child.module:
+            child.module = child.module.replace("dentalpsam.branch3d", "tsgcnet")
+            if child.module == "dentalpsam.mesh_io":
+                child.module = "tools.evaluate_mesh"
     digest = hashlib.sha256(
         ast.dump(node, include_attributes=False).encode()
     ).hexdigest()

@@ -1,272 +1,90 @@
-# Dataset specification
+# Dataset
 
-One sample is one dental arch mesh, represented by three rendered views and
-aligned triangle features. A participant can contribute two arches. Real scans,
-annotations, identities, and split manifests are private and are not included.
-The dataset is being organized and is not yet available for public release.
-Please reach out to the authors regarding data access.
+The dataset is being organized and is not publicly released yet. Please reach
+out to the authors regarding data access. No patient scans, annotations,
+identifiers, or cohort manifests are included in this repository.
 
-The pipeline expects preprocessed, gingiva-removed meshes, not unprocessed
-scanner exports. Gingival removal and mesh simplification are upstream steps;
-they are not performed by the preparation commands below.
+## Input layout
 
-## Expected layout
-
-Use the existing on-disk contract; no conversion to a new dataset format is
-required. Training receives `data/`; testing receives one split, such as
-`data/test/`:
+One sample is a dental arch mesh. A participant may contribute two arches.
+Use this structure for each split:
 
 ```text
 data/
   train/
   val/
   test/
-    mesh_ids.txt                 # fixed evaluation list, one mesh ID per line
-    origin/<mesh_id>.ply          # preprocessed coloured mesh
-    label/<mesh_id>.ply           # topology-matched annotation
-    manual_2D/                   # prepared model inputs
-      origin/<mesh_id>_{0,1,2}.png
-      label/<mesh_id>_{0,1,2}.png
-      info/<mesh_id>.npz
-      SOTA_mesh/<mesh_id>.npz
-      label_mesh/<mesh_id>.npz
+    mesh_ids.txt
+    meshes/<mesh_id>.ply
+    labels/<mesh_id>.ply
+    processed/                       # optional prepared inputs
+      images/<mesh_id>_{0,1,2}.png
+      image_labels/<mesh_id>_{0,1,2}.png
+      mesh_features/<mesh_id>.npz
+      mesh_labels/<mesh_id>.npz
+      metadata/<mesh_id>.npz
 ```
 
-Training and validation splits use the same PLY and prepared-input layout.
-`SOTA_mesh` and `label_mesh` are retained filenames in the input contract, not
-extra commands that users need to run. Both arches and all views belonging
-to one participant must stay in a single train/validation/test split. External
-evaluation data must not be used to select checkpoints or training settings.
+`train/` and `val/` use the same mesh and annotation layout. Training receives
+`--data data`; testing receives `--data data/test`.
 
-## Prepare inputs
+`mesh_ids.txt` is the fixed evaluation list, one six-digit mesh identifier per
+line. The first four digits identify a participant, and suffixes `01` / `02`
+identify their arches. No cases are automatically added, filtered, or replaced.
+Keep all arches and views from one participant in the same split. Never use
+test or external evaluation data for checkpoint or threshold selection.
 
-With prepared `manual_2D/` inputs, use `python test.py` directly as shown in
-the [README](../README.md#testing). For preprocessed PLY pairs without prepared
-inputs, add `--3d-checkpoint` to generate views and mesh features automatically.
-No retraining is required. The original inputs are not modified; generated
-files go into a new output directory outside the source data tree.
+## Meshes and annotations
 
-Training also prepares inputs automatically when
-`python train.py --stage dentalpsam` receives `--3d-checkpoint`. See
-[Training](TRAINING.md). For separately running or inspecting preprocessing,
-see [Advanced preprocessing](#advanced-preprocessing) below.
+`meshes/` contains preprocessed, gingiva-removed coloured PLY meshes;
+`labels/` contains matching PLY annotations with exactly the same vertices,
+triangles, and ordering. Plaque vertices are exactly black. The original
+triangle target uses the per-channel minimum of its vertex colours; binary
+black/white annotations make any black vertex a positive triangle.
 
-```bash
-python test.py --data data/test --checkpoint checkpoints/dentalpsam.pth \
-  --3d-checkpoint checkpoints/3d_branch.pth --output outputs/test_from_ply
-```
+Keep the supplied coordinate system and length units. The code does not infer
+millimetres from filenames. Annotation geometry and scan geometry must agree.
+Gingival removal and mesh simplification happen upstream; they are not run by
+this repository. The pipeline does not perform uniform remeshing.
 
-`--data` is a single split, not the full dataset root. `mesh_ids.txt` declares
-the fixed evaluation cohort; use `--mesh-list` for another location. Supplying
-`--3d-checkpoint` regenerates inputs even if prepared inputs already exist.
-Use the feature checkpoint associated with the DentalPSAM weights, not an
-arbitrary substitute. The output must be new and outside the source data tree.
-Detailed progress is written to `run.log`; missing or misaligned inputs are
-errors rather than silently excluded cases.
+## Prepared inputs
 
-## Array conventions
+When `processed/` is absent, `test.py --weights checkpoints` generates the
+necessary views and features using the fixed 3D checkpoint. New files are
+written under the result directory, never into the original dataset.
+When prepared inputs are supplied, all five subdirectories must be complete;
+a partial directory is an error, not a request to silently regenerate it.
 
-- PLY files preserve their supplied coordinate system and length units. The
-  code does not infer millimeters from a filename. Surface areas have squared
-  input-length units. Origin and annotation vertices/faces must correspond.
-- Origin PNGs are uint8 RGB when loaded, with values 0–255 (OpenCV storage is
-  BGR). Model-input image patches are float32 `[3, 256, 256]`, still in 0–255
-  before SAM preprocessing. Binary label patches use `gray > 127`.
-- The upper image is `[512, 768]`; inner/outer images are `[256, 2048]`.
-  Row-major patch ordering is upper, inner, then outer: 6 + 8 + 8 patches.
-- Each mesh NPZ view is a trusted object array of variable-length `[N, 10]`
-  floating-point patches. Columns 0–8 are the original triangle vertex XYZ
-  coordinates; column 9 is a probability in the input or a binary label in
-  the target. Both are left padded with zeros to `[6000, 10]` by the loader.
-- UV metadata contains per-vertex floating-point pixel coordinates `[V, 2]`
-  and integer vertex-index triples `[F_view, 3]`. Preserve the stored dtype:
-  float32 mean rounding can matter at pixel boundaries. Triangles are sorted
-  by raster depth within each view, not by original PLY row.
-- `face_order_*` is an integer permutation from concatenated patch rows to
-  view-face order. Restore this order before saving per-face predictions.
-  Padding rows must never enter a score file or a reported metric.
-- The 3D feature network repeats the last face to 16,000 rows internally;
-  this is different from DentalPSAM's left-zero patch padding. The original
-  face count determines which rows are valid at export and evaluation.
+Prepared features must come from the checkpoint associated with the trained
+DentalPSAM model. A different 3D checkpoint is not an interchangeable input.
 
-The synthetic example generates exactly this layout from artificial geometry;
-its generated identifiers and mock scores are not study data.
+| Directory | File contract |
+| --- | --- |
+| `images` | Three uint8 colour PNGs: upper (`0`, 512 × 768), inner (`1`, 256 × 2048), outer (`2`, 256 × 2048). Loaded as RGB, values 0–255. |
+| `image_labels` | Matching PNG masks; grayscale values strictly above 127 are plaque. |
+| `mesh_features` | Trusted NPZ with `up`, `in`, `out` object arrays and `face_order_*` arrays. Each face row contains nine triangle XYZ values plus `P(plaque)`. |
+| `mesh_labels` | Same patch layout, but channel 9 contains the binary annotation. These are targets, never substitutes for input probabilities. |
+| `metadata` | `uvpx_up/in/out`: vertex pixel coordinates `[V, 2]`; `tri_up/in/out`: integer vertex-index triples `[F_view, 3]`. Preserve stored dtypes and order. |
 
-## 1. Original PLY inputs
+Each view becomes row-major 256 × 256 patches: 6 upper, 8 inner, 8 outer.
+The loader left-pads each variable-length `[N, 10]` mesh patch with zeros to
+`[6000, 10]`. Padding is excluded from reported metrics. The 3D feature model
+separately repeats the final face to 16,000 rows; only original faces are
+exported. `face_order_*` restores patch rows to view-face order before saving
+predictions. Never sort or resample mesh rows independently.
 
-Each split starts from topology-matched files:
+Only load trusted checkpoint and NPZ files; the retained formats use pickle.
 
-```text
-split/
-  origin/<mesh_id>.ply   # coloured IOS geometry
-  label/<mesh_id>.ply    # same vertices/faces, plaque vertices exactly black
-```
+## Compatibility and outputs
 
-Mesh identifiers end in `01` and `02` for the two arches of one participant;
-the first four characters are used as the participant identifier in the
-current scripts. The 3D feature implementation expects at most 16,000 faces and
-pads a shorter mesh by repeating its last face. The padding is excluded from
-loss and evaluation using the original PLY face count.
+Historical directory names are recognized internally. Existing datasets do
+not need to be renamed. A private symlink view in the new run directory adapts
+public names to the checked numerical loaders; it does not transform arrays.
+Do not mix public and historical names within one split.
 
-This repository does not contain the gum-removal or Open3D decimation program
-that created the server's 16,000-face PLY inputs. It does not perform uniform
-remeshing. Consequently, physical coverage must be measured with original
-triangle areas rather than assuming that all faces have equal area.
-
-## 2. Three-view UV projection
-
-`scripts/data/prepare_views.py` uses the historical planar/cylindrical renderer and
-writes a fresh staging directory:
-
-```text
-uv_output/
-  origin/<mesh_id>_{0,1,2}.png
-  label/<mesh_id>_{0,1,2}.png
-  info/<mesh_id>.npz
-  projection_manifest.json
-```
-
-View 0 (upper) is 512 x 768 and becomes six 256 x 256 patches. Views 1 and 2
-(inner and outer) are 256 x 2048 and each becomes eight patches. Every
-`info` NPZ has exactly these keys:
-
-- `uvpx_up`, `uvpx_in`, `uvpx_out`: projected pixel coordinates per vertex;
-- `tri_up`, `tri_in`, `tri_out`: the original vertex-index triples assigned to
-  each view.
-
-The command checks that the three triangle groups cover the processed PLY face
-count. It refuses to overwrite an existing output directory.
-
-The renderer normalizes each observed UV axis using its minimum and maximum.
-The historical function signature includes coordinate ranges, but the current
-implementation does not use those arguments. Depth sorting controls triangle
-overlap in the raster; the stored triangle order is required for reprojection.
-
-## 3. 3D branch input features
-
-The per-face input score is produced by the frozen 3D feature generator,
-not by DentalPSAM's mesh encoder or decoder. No additional training is needed
-when compatible feature weights or prepared inputs are available.
-
-`scripts/branch3d/export_features.py` applies this frozen checkpoint. It maps each
-UV triangle back to the original PLY face and writes:
-
-```text
-feature_output/
-  SOTA_mesh/<mesh_id>.npz
-  label_mesh/<mesh_id>.npz
-  SOTA_pred/<mesh_id>_{0,1,2}.png
-  scores/<mesh_id>.npy
-  export_manifest.json
-```
-
-Both mesh NPZ files contain `up`, `in`, `out`, and the corresponding
-`face_order_*` arrays. Every non-padding row has ten values:
-
-```text
-[x1, y1, z1, x2, y2, z2, x3, y3, z3, value]
-```
-
-- In `SOTA_mesh`, `value` is the feature generator's class-1 `P(plaque)`.
-- In `label_mesh`, `value` is the binary raw-Ply target: 1 when any incident
-  label vertex is exactly black, otherwise 0.
-- `face_order_*` restores patch rows to the view's original face order.
-
-The exporter rejects a target-direction disagreement, topology mismatch,
-missing requested mesh, malformed probability, duplicate face, or any UV
-partition that is not exactly one-to-one with the original PLY faces.
-
-## 4. DentalPSAM input directory
-
-DentalPSAM training and prediction expect one directory containing:
-
-```text
-manual_2D/
-  origin/       # from uv_output/origin
-  label/        # from uv_output/label
-  info/         # from uv_output/info, required for final evaluation
-  SOTA_mesh/    # from feature_output/SOTA_mesh
-  label_mesh/   # from feature_output/label_mesh
-```
-
-Assemble this as a derived directory or with read-only symlinks. Do not copy
-generated files back into the original dataset. Run `tools/preflight_split.py`
-before model execution.
-
-## 5. Predictions and reportable evaluation
-
-`scripts/dentalpsam/predict.py` writes three continuous 2D probability NPZ/PNG files
-and three `3Dpred/<mesh_id>_<view>.npz` files per mesh. Its printed metrics are
-branch diagnostics.
-
-`scripts/dentalpsam/evaluate.py` is the default MICCAI path. It reprojects the saved
-8-bit PNG probabilities using truncated UV centres, applies fixed 0.5/0.5
-fusion with the 3D scores, thresholds strictly above 0.5, and computes
-equal-triangle metrics per mesh. Its point estimate is the mean over meshes;
-its confidence intervals resample participants with all their meshes.
-
-`tools/evaluate_mesh.py` is the separate physical-area analysis. It maps every saved score to
-the original PLY face, combines arches `01` and `02`, computes each patient's
-metrics, and then reports the patient macro mean with patient-resampled 95%
-bootstrap confidence intervals. Area metrics weight each face by
-
-```text
-0.5 * ||(v2 - v1) x (v3 - v1)||.
-```
-
-Paired model comparisons use patient-level differences, paired-bootstrap
-intervals, two-sided sign-flip tests, and Holm adjustment.
-
-## Advanced preprocessing
-
-The normal commands prepare inputs automatically with `--3d-checkpoint`.
-Use these optional steps to inspect individual stages or prepare reusable
-inputs without running the neural model afterward. Preparation uses frozen
-weights and does not train either branch.
-
-Set absolute paths to a preprocessed PLY split, its fixed mesh list, and the
-compatible 3D checkpoint. Choose a new directory outside the source data tree:
-
-```bash
-DATA_DIR=/absolute/path/to/test
-MESH_LIST=/absolute/path/to/splits/test.txt
-FEATURE_CHECKPOINT=/absolute/path/to/checkpoints/3d_branch.pth
-PREPARED_DIR="$PWD/outputs/prepared_test"
-mkdir -p "$PREPARED_DIR"
-
-python scripts/data/prepare_views.py \
-  --origin-dir "$DATA_DIR/origin" --label-dir "$DATA_DIR/label" \
-  --mesh-list "$MESH_LIST" --output-dir "$PREPARED_DIR/views"
-
-python scripts/branch3d/export_features.py \
-  --checkpoint "$FEATURE_CHECKPOINT" \
-  --data-dir "$DATA_DIR" --info-dir "$PREPARED_DIR/views/info" \
-  --mesh-list "$MESH_LIST" --out-dir "$PREPARED_DIR/features" \
-  --device cuda:0 --k 12
-```
-
-Assemble the prepared split using links; do not move or modify the PLY inputs:
-
-```bash
-mkdir -p "$PREPARED_DIR/dataset/manual_2D"
-ln -s "$DATA_DIR/origin" "$PREPARED_DIR/dataset/origin"
-ln -s "$DATA_DIR/label" "$PREPARED_DIR/dataset/label"
-ln -s "$PREPARED_DIR/views/origin" "$PREPARED_DIR/dataset/manual_2D/origin"
-ln -s "$PREPARED_DIR/views/label" "$PREPARED_DIR/dataset/manual_2D/label"
-ln -s "$PREPARED_DIR/views/info" "$PREPARED_DIR/dataset/manual_2D/info"
-ln -s "$PREPARED_DIR/features/SOTA_mesh" "$PREPARED_DIR/dataset/manual_2D/SOTA_mesh"
-ln -s "$PREPARED_DIR/features/label_mesh" "$PREPARED_DIR/dataset/manual_2D/label_mesh"
-
-python tools/preflight_split.py \
-  --data-dir "$PREPARED_DIR/dataset/manual_2D" \
-  --participant-id-prefix-length 4 --out "$PREPARED_DIR/input_check.json"
-
-python test.py --data "$PREPARED_DIR/dataset" \
-  --mesh-list "$MESH_LIST" \
-  --checkpoint checkpoints/dentalpsam.pth \
-  --sam-checkpoint checkpoints/sam_vit_b_01ec64.pth \
-  --output outputs/test_prepared
-```
-
-Prepare training and validation separately with the same frozen checkpoint.
-Never overwrite inputs used by an existing run or mix participants across splits.
+The output directory must be new and outside the input tree. Testing writes
+`predictions/`, `metrics.json`, `summary.txt`, and an evaluation manifest.
+The single default evaluator is the original equal-triangle paper protocol:
+fixed 0.5/0.5 fusion, strict `> 0.5`, and mesh-macro estimates with
+participant-clustered confidence intervals. It is not area-weighted evaluation.
+This software contract does not itself establish reproduction of paper values.

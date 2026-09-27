@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Synthetic end-to-end regression test for ``tools/evaluate_mesh.py``.
+"""Synthetic end-to-end regression test for ``dev/evaluate_mesh.py``.
 
 The fixture contains two paired participants, two unequal-area faces per arch,
 and UV triangles deliberately stored in a different order from the PLY faces.
@@ -23,7 +23,7 @@ import numpy as np
 
 
 ROOT = Path(__file__).resolve().parents[1]
-EVALUATOR = ROOT / "tools" / "evaluate_mesh.py"
+EVALUATOR = ROOT / "dev" / "evaluate_mesh.py"
 SUBPROCESS_ENV = {**os.environ, "PYTHONDONTWRITEBYTECODE": "1"}
 
 

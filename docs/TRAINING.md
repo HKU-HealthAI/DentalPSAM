@@ -1,61 +1,62 @@
 # Training
 
-Run training only when task weights are unavailable or a new declared
-experiment is required. Testing a frozen checkpoint needs no training.
+Testing trained checkpoints does not require training. A new task-training run
+has two stages: train the 3D branch, then use its frozen checkpoint to prepare
+inputs for DentalPSAM. SAM initialization remains pretrained rather than random.
 
-## Stage 1: 3D branch
+## Prerequisites
+
+Prepare participant-disjoint `data/train` and `data/val` splits using the
+[dataset layout](DATASET.md). Each contains preprocessed meshes and matching
+annotations. Place the SAM ViT-B initialization at `checkpoints/sam.pth`;
+`--sam-checkpoint` can override this location. Weights are not bundled or
+automatically downloaded. Use new output paths outside the input data tree.
+
+## 1. Train the 3D branch
 
 ```bash
-python train.py --stage 3d --data data --output outputs/3d_branch \
-  --epochs 50 --patience 12 --learning-rate 1e-4 --weight-decay 1e-5 \
-  --seed 42 --k 12 --device cuda:0
+python train.py --stage 3d --data data --output outputs/3d
 ```
 
-`data/train` and `data/val` each contain `origin/` and `label/` PLY pairs.
-The preserved implementation uses batch size 1, NLL loss, Adam, and
-ReduceLROnPlateau. Checkpoint selection uses participant-macro area-weighted
-validation plaque IoU; `best.pth` is written to the new output directory.
-This is a validation-only protocol, not an exact historical training replay.
-It must not be confused with the equal-triangle test metric.
+The selected checkpoint is `outputs/3d/best.pth`. The retained training defaults
+are 50 epochs, batch size 1, Adam at `1e-4`, weight decay `1e-5`, NLL loss,
+ReduceLROnPlateau, patience 12, and seed 42. Selection uses participant-macro
+area-weighted validation plaque IoU, not the equal-triangle test estimator.
 
-## Stage 2: DentalPSAM
+## 2. Train DentalPSAM
 
 ```bash
 python train.py --stage dentalpsam --data data \
-  --3d-checkpoint outputs/3d_branch/best.pth \
-  --sam-checkpoint checkpoints/sam_vit_b_01ec64.pth \
-  --output outputs/dentalpsam --epochs 50 --batch-size 4 \
-  --learning-rate 1e-4 --seed 42 --deterministic --device cuda:0
+  --branch-checkpoint outputs/3d/best.pth --output outputs/dentalpsam
 ```
 
-With `--3d-checkpoint`, the command creates frozen inputs in a separate sibling
-directory ending in `_inputs`; original data stay unchanged. Without this
-option, `data/train/manual_2D` and `data/val/manual_2D` must already exist.
-Explicit `--train-dir`/`--val-dir` may be used instead of `--data`.
+The command prepares views and frozen 3D features automatically in a separate
+`outputs/dentalpsam_inputs` directory, then starts training. It does not overwrite
+source data or change the 3D checkpoint. When compatible prepared inputs already
+exist, omit `--branch-checkpoint` to reuse them.
 
-The preserved defaults are Adam, zero weight decay, StepLR at epoch 40 with
-gamma 0.1, 2D Dice-CE weight 2, mesh BCE weight 1, and no early stopping.
-All-zero mesh padding rows are excluded. Training patches require at least
-50 positive label pixels. The best checkpoint is selected by validation mesh
-BCE and saved as `best_model.pth`.
+Defaults are 50 epochs, batch size 4, Adam at `1e-4`, zero weight decay, StepLR
+at epoch 40 with gamma 0.1, seed 42, 2D Dice-CE weight 2, and mesh BCE weight 1.
+There is no early stopping. Zero-padded rows are excluded from mesh loss, and
+training patches require at least 50 positive label pixels. Validation mesh
+BCE selects `outputs/dentalpsam/best_model.pth`.
 
-`--mesh-fusion gated` is the default; `--mesh-fusion concat` defines a separate
-architecture identity. Neither variant should be selected using test scores.
+The default mesh fusion variant is gated; `--mesh-fusion concat` defines a
+different checkpoint architecture. Frozen model loading infers the variant
+from checkpoint keys and is strict. Do not select a variant from test outcomes.
 
-## Validation and boundaries
+## Options and scope
 
 ```bash
-python scripts/dentalpsam/validate.py \
-  --checkpoint outputs/dentalpsam/best_model.pth \
-  --sam-checkpoint checkpoints/sam_vit_b_01ec64.pth \
-  --val-dir data/val/manual_2D --output outputs/validation.json
+python train.py --stage 3d --help
+python train.py --stage dentalpsam --help
 ```
 
-For regenerated inputs, pass the corresponding prepared validation directory.
-Training/validation code is shared through the package, not through executable
-scripts. Validation diagnostics retain their existing threshold and aggregation
-rules; only the testing workflow is the original equal-triangle paper protocol.
+Use `--device cuda:1` to choose a GPU. The 3D stage enables deterministic
+settings; use `--deterministic` for DentalPSAM. Exact bitwise identity across
+PyTorch versions or GPUs is not promised.
 
-The refactor does not alter optimizer settings, losses, seeds, or selection
-rules to improve outcomes. Exact historical training and MICCAI result
-reproduction remain unverified. See [Reproducibility](REPRODUCIBILITY.md).
+These are the retained validation-only trainers, not a claim of exact historical
+training replay. Cleanup does not modify losses, selection rules, normalization,
+or the paper evaluator to improve scores. Detailed environment and compatibility
+records are kept separately in [reproducibility](../reproducibility/REPRODUCIBILITY.md).

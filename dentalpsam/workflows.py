@@ -9,6 +9,8 @@ from contextlib import redirect_stdout
 import json
 from pathlib import Path
 
+from dentalpsam._layout import PROCESSED_NAMES, SplitLayout
+
 
 def fresh_directory(path, sources):
     """Create a new run outside all input trees; never reuse existing output."""
@@ -26,7 +28,7 @@ def fresh_directory(path, sources):
 def prepare_split(data, mesh_list, checkpoint, output, device):
     """Prepare one fixed split in a fresh directory using frozen 3D weights."""
     from dentalpsam.preparation import prepare_views
-    from tsgcnet.features import export_features
+    from dentalpsam.branch3d.features import export_features
 
     data = Path(data).resolve()
     output = fresh_directory(output, [data])
@@ -61,30 +63,78 @@ def prepare_split(data, mesh_list, checkpoint, output, device):
     return derived
 
 
-def prepare_training_inputs(args):
-    """Generate immutable inputs for both declared splits before joint training."""
+def train_model(args):
+    """Adapt directory names, then call the unchanged stage-specific trainer."""
     roots = [args.train_dir.resolve(), args.val_dir.resolve()]
-    names = [
-        sorted(path.stem for path in (root / "label").glob("*.ply")) for root in roots
-    ]
+    target = (args.out_dir if args.stage == "3d" else args.save_dir).resolve()
+    if target.exists():
+        raise FileExistsError(f"Choose a new training output: {target}")
+    if any(target == root or root in target.parents for root in roots):
+        raise ValueError("Training output must be outside the source data")
+    branch = getattr(args, "branch_checkpoint", None)
+    if args.stage == "dentalpsam" and not args.sam_checkpoint.is_file():
+        raise FileNotFoundError(f"SAM initialization not found: {args.sam_checkpoint}")
+    if branch is not None and not branch.is_file():
+        raise FileNotFoundError(f"3D branch checkpoint not found: {branch}")
+
+    layouts, names = [], []
+    for root in roots:
+        # Explicit historical prepared-directory arguments remain compatible.
+        direct = (
+            args.stage == "dentalpsam"
+            and branch is None
+            and (root / "SOTA_mesh").is_dir()
+        )
+        layout = None if direct else SplitLayout.read(root)
+        if (
+            layout is not None
+            and args.stage == "dentalpsam"
+            and branch is None
+            and not layout.prepared()
+        ):
+            raise FileNotFoundError(
+                "Prepared inputs missing; supply --branch-checkpoint"
+            )
+        labels = root / "label_mesh" if direct else layout.labels
+        suffix = "*.npz" if direct else "*.ply"
+        names.append(sorted(path.stem for path in labels.glob(suffix)))
+        layouts.append(layout)
     if not all(names):
-        raise ValueError("Each raw training/validation split needs label/*.ply")
+        raise ValueError(
+            "Both training and validation splits must contain labelled meshes"
+        )
     if {name[:4] for name in names[0]} & {name[:4] for name in names[1]}:
         raise ValueError("Training and validation participants overlap")
-    output = fresh_directory(
-        args.save_dir.with_name(args.save_dir.name + "_inputs"), roots
-    )
+
+    workspace = None
+    if branch is not None or any(layout and layout.public for layout in layouts):
+        workspace = fresh_directory(target.with_name(target.name + "_inputs"), roots)
     prepared = []
-    for kind, source, ids in zip(("train", "val"), roots, names):
-        mesh_list = output / f"{kind}_mesh_ids.txt"
-        mesh_list.write_text("".join(name + "\n" for name in ids))
-        prepared.append(
-            prepare_split(
-                source, mesh_list, args.branch_checkpoint, output / kind, args.device
+    for kind, root, layout, ids in zip(("train", "val"), roots, layouts, names):
+        if layout is None:
+            prepared.append(root)
+            continue
+        source = (
+            layout.legacy_view(
+                workspace / f"source_{kind}",
+                include_processed=args.stage != "3d" and branch is None,
             )
-            / "manual_2D"
+            if layout.public
+            else root
         )
-    return tuple(prepared)
+        if branch is not None:
+            mesh_list = workspace / f"{kind}_mesh_ids.txt"
+            mesh_list.write_text("".join(name + "\n" for name in ids))
+            source = prepare_split(
+                source, mesh_list, branch, workspace / kind, args.device
+            )
+        prepared.append(source if args.stage == "3d" else source / "manual_2D")
+    args.train_dir, args.val_dir = prepared
+    if args.stage == "3d":
+        from dentalpsam.branch3d.training import run_training
+    else:
+        from dentalpsam.training import run_training
+    run_training(args)
 
 
 def test_model(args):
@@ -92,9 +142,18 @@ def test_model(args):
     from dentalpsam.evaluation import read_mesh_ids
     from dentalpsam.inference import predict_split
     from dentalpsam.reporting import evaluate_predictions
-    from tools.preflight_split import inspect_split
+    from dentalpsam._preflight import inspect_split
 
     data = args.data.expanduser().resolve()
+    layout = SplitLayout.read(data)
+    prepared = layout.prepared() if args.branch_checkpoint is None else False
+    if not prepared and args.branch_checkpoint is None:
+        weights = getattr(args, "weights", None)
+        if weights is None:
+            raise FileNotFoundError(
+                "Prepared inputs missing; supply --weights or --branch-checkpoint"
+            )
+        args.branch_checkpoint = weights / "branch3d.pth"
     mesh_list = args.mesh_list or data / "mesh_ids.txt"
     sam = args.sam_checkpoint or args.checkpoint.parent / "sam_vit_b_01ec64.pth"
     for path in (args.checkpoint, sam, mesh_list):
@@ -111,14 +170,21 @@ def test_model(args):
         flush=True,
     )
     with (output / "run.log").open("w") as log, redirect_stdout(log):
+        data = layout.legacy_view(output / ".inputs", include_processed=prepared)
         if args.branch_checkpoint is not None:
             data = prepare_split(
                 data,
                 mesh_list,
                 args.branch_checkpoint,
-                output / "prepared",
+                output / ".prepared",
                 args.device,
             )
+            # Expose newly generated inputs under the public directory names.
+            (output / "processed").mkdir()
+            for old, new in PROCESSED_NAMES.items():
+                (output / "processed" / new).symlink_to(
+                    data / "manual_2D" / old, target_is_directory=True
+                )
         inspect_split(data / "manual_2D", participant_id_prefix_length=4)
         predict_split(
             Namespace(

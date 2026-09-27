@@ -11,5 +11,5 @@ weights and checked model construction depend on this interface. It must not
 be replaced by an unmodified SAM installation as a packaging cleanup.
 
 The inspected source hashes and checkpoint compatibility evidence are retained
-in `docs/archive/SOURCE_PROVENANCE.md` and `docs/verification/`. No SAM weights are
+in `reproducibility/archive/SOURCE_PROVENANCE.md` and `reproducibility/verification/`. No SAM weights are
 included in this directory.

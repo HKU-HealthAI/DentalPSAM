@@ -10,7 +10,8 @@ def dentalpsam_train_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument("--train-dir", type=Path)
     parser.add_argument("--val-dir", type=Path)
-    parser.add_argument("--sam-checkpoint", type=Path, required=True)
+    parser.add_argument("--sam-checkpoint", type=Path, default=Path("checkpoints/sam.pth"),
+                        help="SAM initialization (default: checkpoints/sam.pth)")
     parser.add_argument(
         "--save-dir", "--output", dest="save_dir", type=Path, required=True
     )

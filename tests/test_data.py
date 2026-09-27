@@ -84,6 +84,18 @@ def main():
         np.testing.assert_array_equal(images[0, 0, 0], [0, 0, 17])
         np.testing.assert_array_equal(masks[0, 0, :3], [0, 0, 1])
         assert mesh[0, -1, 9] == 0.25 and labels[0, -1, 9] == 1
+        # The new directory vocabulary must not change a single tensor element.
+        from dentalpsam._layout import PROCESSED_NAMES, SplitLayout
+        public = root / "public_split"
+        for folder in ("meshes", "labels", "processed"):
+            (public / folder).mkdir(parents=True, exist_ok=True)
+        (root / "info").mkdir()
+        for old, new in PROCESSED_NAMES.items():
+            (public / "processed" / new).symlink_to(root / old, target_is_directory=True)
+        adapted = SplitLayout.read(public).legacy_view(root / "adapter")
+        actual = load_and_patchify_png_permesh(adapted / "manual_2D", "000101")
+        for got, expected in zip(actual, (images, masks, indices, mesh, labels)):
+            np.testing.assert_array_equal(got, expected)
         subset = load_and_patchify_png_permesh(root, "000101", min_positive_pixels=1)
         assert subset[2] == [0, 6, 14]
         trained = load_and_patchify_png(root, min_positive_pixels=1)

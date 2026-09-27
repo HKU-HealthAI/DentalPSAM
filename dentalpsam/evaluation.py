@@ -12,7 +12,7 @@ from pathlib import Path
 import cv2
 import numpy as np
 
-from tools.evaluate_mesh import read_ply_mesh, view_to_mesh_face_indices
+from dentalpsam.mesh_io import read_ply_mesh, view_to_mesh_face_indices
 
 VIEWS = ("up", "in", "out")
 

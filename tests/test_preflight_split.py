@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Dependency-free functional test for ``tools/preflight_split.py``."""
+"""Dependency-free functional test for ``dev/preflight_split.py``."""
 
 from __future__ import annotations
 
@@ -10,8 +10,8 @@ from pathlib import Path
 
 sys.dont_write_bytecode = True
 ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(ROOT / "tools"))
-from preflight_split import inspect_split  # noqa: E402
+sys.path.insert(0, str(ROOT))
+from dentalpsam._preflight import inspect_split  # noqa: E402
 
 
 def populate_valid_split(root: Path) -> None:
