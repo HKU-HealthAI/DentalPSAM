@@ -1,4 +1,8 @@
-"""Pin numerical sources and extracted helpers to the pre-refactor baseline."""
+"""Pin numerical sources; separately reviewed corrections retain prior hashes.
+
+The fixture records each deliberate source-compatibility correction and its
+behavioral tests. A structural cleanup alone must never change these hashes.
+"""
 
 import ast
 import hashlib

@@ -169,12 +169,16 @@
     {
       "module": "dentalpsam/branch3d/features.py",
       "name": "patch_rows",
-      "ast_sha256": "7212f36607d254acbdb361a046f923c7c60ecbcc1c209eb034cec8c8d067a13b"
+      "ast_sha256": "8678971f85a47b8921799c44f4e4e2270cc602ddd3456646ad807a183f1c1a9c",
+      "previous_ast_sha256": "7212f36607d254acbdb361a046f923c7c60ecbcc1c209eb034cec8c8d067a13b",
+      "reviewed_change": "2026-09-27: restore source-exporter float64 centres, upper-only clipping, negative indexing and empty patches; exact native NPZ parity on real padded and unpadded meshes; regression vectors in test_feature_export.py."
     },
     {
       "module": "dentalpsam/branch3d/features.py",
       "name": "rasterize",
-      "ast_sha256": "2ac86fb3c37cd46c3d16195e8c4fdd120a70de439ef96e45e8905fe2e192eb6f"
+      "ast_sha256": "4309a93463a6a671863e135355c81c1aaea919859f22b97cdc6c2edcbdaa0e76",
+      "previous_ast_sha256": "2ac86fb3c37cd46c3d16195e8c4fdd120a70de439ef96e45e8905fe2e192eb6f",
+      "reviewed_change": "2026-09-27: restore source auxiliary PNG coordinate/intensity truncation and OpenCV polygon clipping; exact native image parity on real meshes; test_feature_export.py pins the behavior."
     },
     {
       "module": "dentalpsam/model.py",
