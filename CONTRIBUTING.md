@@ -7,7 +7,10 @@ traceable. Source organization does not by itself establish paper reproduction.
 
 1. Fetch and inspect `git status --short --branch` before making changes. Preserve
    other contributors' work. Use a topic branch for subsequent changes.
-2. Make focused commits, for example `model: ...`, `eval: ...`, `docs: ...`.
+2. Make focused commits with concrete subjects, for example
+   `Preserve OpenCV rounding in probability maps` or
+   `Document the fixed-checkpoint testing protocol`. Use the body to record
+   the technical reason, experiment or test, and any remaining limitation.
    Do not amend published history, force-push, or reset other people's changes.
 3. Run the relevant tests on the experiment server in the documented environment.
    Record the exact source revision or source hashes with test evidence.

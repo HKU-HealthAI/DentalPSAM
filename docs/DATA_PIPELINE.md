@@ -1,5 +1,55 @@
 # Data pipeline and file contracts
 
+## Prepare a split
+
+Skip this step when a prepared `manual_2D` directory is available. Preparation
+uses a fixed 3D feature checkpoint; it does not train TSGCNet or DentalPSAM.
+The `tsgcnet` filenames identify the implementation of that feature generator.
+
+Set absolute paths to an existing PLY split, its fixed mesh list, and the
+checkpoint. Choose a new directory outside the original data tree:
+
+```bash
+DATA_DIR=/absolute/path/to/test
+MESH_LIST=/absolute/path/to/splits/test.txt
+FEATURE_CHECKPOINT=/absolute/path/to/checkpoints/3d_branch.pth
+PREPARED_DIR="$PWD/outputs/prepared_test"
+mkdir -p "$PREPARED_DIR"
+
+python prepare_uv_views.py \
+  --origin-dir "$DATA_DIR/origin" --label-dir "$DATA_DIR/label" \
+  --mesh-list "$MESH_LIST" --output-dir "$PREPARED_DIR/views"
+
+python export_tsgcnet_features.py \
+  --checkpoint "$FEATURE_CHECKPOINT" \
+  --data-dir "$DATA_DIR" --info-dir "$PREPARED_DIR/views/info" \
+  --mesh-list "$MESH_LIST" --out-dir "$PREPARED_DIR/features" \
+  --device cuda:0 --k 12
+```
+
+Assemble the prepared layout using links. These commands create links only;
+they do not move or modify the original PLY files:
+
+```bash
+mkdir -p "$PREPARED_DIR/dataset/manual_2D"
+ln -s "$DATA_DIR/origin" "$PREPARED_DIR/dataset/origin"
+ln -s "$DATA_DIR/label" "$PREPARED_DIR/dataset/label"
+ln -s "$PREPARED_DIR/views/origin" "$PREPARED_DIR/dataset/manual_2D/origin"
+ln -s "$PREPARED_DIR/views/label" "$PREPARED_DIR/dataset/manual_2D/label"
+ln -s "$PREPARED_DIR/views/info" "$PREPARED_DIR/dataset/manual_2D/info"
+ln -s "$PREPARED_DIR/features/SOTA_mesh" "$PREPARED_DIR/dataset/manual_2D/SOTA_mesh"
+ln -s "$PREPARED_DIR/features/label_mesh" "$PREPARED_DIR/dataset/manual_2D/label_mesh"
+
+python tools/preflight_split.py \
+  --data-dir "$PREPARED_DIR/dataset/manual_2D" \
+  --participant-id-prefix-length 4 --out "$PREPARED_DIR/input_check.json"
+```
+
+Then use `--data-dir "$PREPARED_DIR/dataset/manual_2D"` for prediction and
+`--data-dir "$PREPARED_DIR/dataset"` for evaluation in the README commands.
+Prepare training and validation splits separately with the same frozen
+feature checkpoint. Never overwrite input features used by an existing run.
+
 ## 1. Original PLY inputs
 
 Each split starts from topology-matched files:
@@ -45,9 +95,18 @@ View 0 (upper) is 512 x 768 and becomes six 256 x 256 patches. Views 1 and 2
 The command checks that the three triangle groups cover the processed PLY face
 count. It refuses to overwrite an existing output directory.
 
-## 3. TSGCNet mesh features
+The renderer normalizes each observed UV axis using its minimum and maximum.
+The historical function signature includes coordinate ranges, but the current
+implementation does not use those arguments. Depth sorting controls triangle
+overlap in the raster; the stored triangle order is required for reprojection.
 
-`export_tsgcnet_features.py` applies a frozen TSGCNet checkpoint. It maps each
+## 3. 3D branch input features
+
+The per-face input score is produced by a frozen TSGCNet feature generator,
+not by DentalPSAM's mesh encoder or decoder. No additional training is needed
+when compatible feature weights or prepared inputs are available.
+
+`export_tsgcnet_features.py` applies this frozen checkpoint. It maps each
 UV triangle back to the original PLY face and writes:
 
 ```text

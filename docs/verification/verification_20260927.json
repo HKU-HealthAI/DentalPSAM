@@ -1,0 +1,430 @@
+{
+  "artifact_sha256": {
+    "eval_0819_120/summary.json": "4fa62c4952b45fda78f366907b131605fb7c16cf38093e8ca878b683a7f22163",
+    "public_candidate_checks.log": "0934633b8679fe7df61c78c5b54cf3717f84133393389a41b9dc84f10b0d489b",
+    "public_candidate_pipeline/smoke_manifest.json": "d412e413a3d6a913b963851c814d61e120a8d53076e68841dd5f0c45fc21a04c",
+    "sota_checkpoint_comparison_120/audit.json": "5f7ace15d413f98ef369c2a7cc75ddd960cbbc6b78dab3843e5feaa97923612a",
+    "tsgcnet_original_120/summary.json": "163ab1d31d8dc6a1cefc6331c3954e948d565d7625acab794f1664a846138a36"
+  },
+  "cached_3d_input_scores": {
+    "checkpoint_comparison": {
+      "exactly_equal": false,
+      "maximum_absolute_difference": 0.9980940222740173,
+      "mean_mesh_mean_absolute_difference": 0.1103650633239583
+    },
+    "metrics": {
+      "accuracy": {
+        "ci_high": 0.8538370158486467,
+        "ci_low": 0.8246251989146133,
+        "mean": 0.8398027857860908
+      },
+      "f1": {
+        "ci_high": 0.6652356101405371,
+        "ci_low": 0.6213557782892369,
+        "mean": 0.6443613485467049
+      },
+      "mean_dice": {
+        "ci_high": 0.7819416446576891,
+        "ci_low": 0.7532945999814592,
+        "mean": 0.7682123778189534
+      },
+      "mean_iou": {
+        "ci_high": 0.6623771438224303,
+        "ci_low": 0.628202582379743,
+        "mean": 0.6456263768326015
+      },
+      "nonplaque_dice": {
+        "ci_high": 0.9038069838487062,
+        "ci_low": 0.8789414742006416,
+        "mean": 0.8920634070912018
+      },
+      "nonplaque_iou": {
+        "ci_high": 0.8272450708000058,
+        "ci_low": 0.7889459295398865,
+        "mean": 0.808966328298132
+      },
+      "npv": {
+        "ci_high": 0.9009921638528798,
+        "ci_low": 0.8528987060162401,
+        "mean": 0.8782043265908855
+      },
+      "plaque_dice": {
+        "ci_high": 0.6652356101405371,
+        "ci_low": 0.6213557782892369,
+        "mean": 0.6443613485467049
+      },
+      "plaque_iou": {
+        "ci_high": 0.5041092349967906,
+        "ci_low": 0.45947386888971503,
+        "mean": 0.48228642536707106
+      },
+      "ppv": {
+        "ci_high": 0.7208683810770312,
+        "ci_low": 0.6401137502319703,
+        "mean": 0.6810634871966388
+      },
+      "sensitivity": {
+        "ci_high": 0.694445841322438,
+        "ci_low": 0.63555681185914,
+        "mean": 0.6652475651944864
+      },
+      "specificity": {
+        "ci_high": 0.9239423640519902,
+        "ci_low": 0.9069605350095942,
+        "mean": 0.9156794966826394
+      }
+    }
+  },
+  "cached_dentalpsam_predictions": {
+    "2d": {
+      "accuracy": {
+        "ci_high": 0.8207763764117093,
+        "ci_low": 0.7937662555716373,
+        "mean": 0.8077539063313852
+      },
+      "f1": {
+        "ci_high": 0.592928132829142,
+        "ci_low": 0.54274625473564,
+        "mean": 0.5686942748045224
+      },
+      "mean_dice": {
+        "ci_high": 0.7310152252779345,
+        "ci_low": 0.7054622536319574,
+        "mean": 0.7187653179127944
+      },
+      "mean_iou": {
+        "ci_high": 0.6018433865524923,
+        "ci_low": 0.5750872737891084,
+        "mean": 0.5887196009513916
+      },
+      "nonplaque_dice": {
+        "ci_high": 0.8809466832882694,
+        "ci_low": 0.8556607141120228,
+        "mean": 0.8688363610210666
+      },
+      "nonplaque_iou": {
+        "ci_high": 0.7903174056649298,
+        "ci_low": 0.7522121482592208,
+        "mean": 0.7719802366610817
+      },
+      "npv": {
+        "ci_high": 0.8835460173993419,
+        "ci_low": 0.839953204613037,
+        "mean": 0.862727216338141
+      },
+      "plaque_dice": {
+        "ci_high": 0.592928132829142,
+        "ci_low": 0.54274625473564,
+        "mean": 0.5686942748045224
+      },
+      "plaque_iou": {
+        "ci_high": 0.42856180448219594,
+        "ci_low": 0.3815672139575604,
+        "mean": 0.4054589652417016
+      },
+      "ppv": {
+        "ci_high": 0.6218226436048667,
+        "ci_low": 0.5473267503408067,
+        "mean": 0.5848282578332782
+      },
+      "sensitivity": {
+        "ci_high": 0.6131795131188305,
+        "ci_low": 0.5617688965406994,
+        "mean": 0.5881817675424668
+      },
+      "specificity": {
+        "ci_high": 0.8903090247418163,
+        "ci_low": 0.872216633058181,
+        "mean": 0.8813969838131325
+      }
+    },
+    "3d": {
+      "accuracy": {
+        "ci_high": 0.8576191379718393,
+        "ci_low": 0.8274566382355276,
+        "mean": 0.8433221472826425
+      },
+      "f1": {
+        "ci_high": 0.6667155251273024,
+        "ci_low": 0.6223813523532875,
+        "mean": 0.645594617054286
+      },
+      "mean_dice": {
+        "ci_high": 0.7839680648616333,
+        "ci_low": 0.7549264496630129,
+        "mean": 0.7700429455097162
+      },
+      "mean_iou": {
+        "ci_high": 0.6656245614375926,
+        "ci_low": 0.6305375873099034,
+        "mean": 0.6484855182437431
+      },
+      "nonplaque_dice": {
+        "ci_high": 0.9065511067476476,
+        "ci_low": 0.8808452429273843,
+        "mean": 0.8944912739651462
+      },
+      "nonplaque_iou": {
+        "ci_high": 0.8318139701122735,
+        "ci_low": 0.7923688195051519,
+        "mean": 0.8131634303163507
+      },
+      "npv": {
+        "ci_high": 0.89960797871497,
+        "ci_low": 0.8523083554317412,
+        "mean": 0.8770508965258761
+      },
+      "plaque_dice": {
+        "ci_high": 0.6667155251273024,
+        "ci_low": 0.6223813523532875,
+        "mean": 0.645594617054286
+      },
+      "plaque_iou": {
+        "ci_high": 0.5063212777153902,
+        "ci_low": 0.46013759441185387,
+        "mean": 0.4838076061711355
+      },
+      "ppv": {
+        "ci_high": 0.7271296446722295,
+        "ci_low": 0.6518127997952163,
+        "mean": 0.6901421944162122
+      },
+      "sensitivity": {
+        "ci_high": 0.6809591099708838,
+        "ci_low": 0.6232243866247021,
+        "mean": 0.6523019673241561
+      },
+      "specificity": {
+        "ci_high": 0.9278923278386193,
+        "ci_low": 0.9139875324722523,
+        "mean": 0.9211618399842493
+      }
+    },
+    "fusion": {
+      "accuracy": {
+        "ci_high": 0.8518154686873333,
+        "ci_low": 0.8238581579146549,
+        "mean": 0.8385871033280726
+      },
+      "f1": {
+        "ci_high": 0.6491542741906855,
+        "ci_low": 0.6035793711250681,
+        "mean": 0.6272990056739458
+      },
+      "mean_dice": {
+        "ci_high": 0.7720331214148357,
+        "ci_low": 0.7452166306145102,
+        "mean": 0.7592736132160134
+      },
+      "mean_iou": {
+        "ci_high": 0.6512053669009125,
+        "ci_low": 0.6198501033562919,
+        "mean": 0.6360487680071114
+      },
+      "nonplaque_dice": {
+        "ci_high": 0.9027550501816531,
+        "ci_low": 0.8782693100282307,
+        "mean": 0.8912482207580807
+      },
+      "nonplaque_iou": {
+        "ci_high": 0.8253927245726509,
+        "ci_low": 0.7876671972376191,
+        "mean": 0.8075566410413395
+      },
+      "npv": {
+        "ci_high": 0.8947873586259006,
+        "ci_low": 0.850051999069993,
+        "mean": 0.8734532087336784
+      },
+      "plaque_dice": {
+        "ci_high": 0.6491542741906855,
+        "ci_low": 0.6035793711250681,
+        "mean": 0.6272990056739458
+      },
+      "plaque_iou": {
+        "ci_high": 0.48699216491845937,
+        "ci_low": 0.44094501140487874,
+        "mean": 0.4645408949728835
+      },
+      "ppv": {
+        "ci_high": 0.707917208534182,
+        "ci_low": 0.6332624024693521,
+        "mean": 0.6712902160846954
+      },
+      "sensitivity": {
+        "ci_high": 0.6528975031810246,
+        "ci_low": 0.6000980025325877,
+        "mean": 0.6267574321432262
+      },
+      "specificity": {
+        "ci_high": 0.9232687969360647,
+        "ci_low": 0.910616350252141,
+        "mean": 0.9171213020490716
+      }
+    }
+  },
+  "cli_import_checks": 14,
+  "cohort": {
+    "bootstrap_repetitions": 10000,
+    "mesh_list_sha256": "ee5b59de469f9fe25f94ba8ba9752351fd6252cc7a690f4d3ba24f826581bc14",
+    "meshes": 120,
+    "participants": 60,
+    "protocol": "equal-triangle, strict >0.5, mesh-macro, participant-clustered 95% CI",
+    "seed": 42
+  },
+  "date": "2026-09-27",
+  "fresh_pipeline": {
+    "mesh_count": 1,
+    "raw_ply_unchanged": true,
+    "stages": [
+      {
+        "returncode": 0,
+        "stage": "uv",
+        "status": "passed"
+      },
+      {
+        "returncode": 0,
+        "stage": "tsgcnet",
+        "status": "passed"
+      },
+      {
+        "returncode": 0,
+        "stage": "preflight",
+        "status": "passed"
+      },
+      {
+        "returncode": 0,
+        "stage": "prediction",
+        "status": "passed"
+      },
+      {
+        "returncode": 0,
+        "stage": "evaluation",
+        "status": "passed"
+      }
+    ]
+  },
+  "frozen_tsgcnet_checkpoint": {
+    "metrics": {
+      "accuracy": {
+        "ci_high": 0.842219419613791,
+        "ci_low": 0.803141920223367,
+        "mean": 0.8235658001737087
+      },
+      "f1": {
+        "ci_high": 0.6084247821363575,
+        "ci_low": 0.5277188224293783,
+        "mean": 0.5694412024618823
+      },
+      "mean_dice": {
+        "ci_high": 0.7472142374179475,
+        "ci_low": 0.6999838712897286,
+        "mean": 0.7245468272943977
+      },
+      "mean_iou": {
+        "ci_high": 0.6291361345659375,
+        "ci_low": 0.5822808361863142,
+        "mean": 0.6065561177542719
+      },
+      "nonplaque_dice": {
+        "ci_high": 0.8951610565706362,
+        "ci_low": 0.8627493039377124,
+        "mean": 0.8796524521269133
+      },
+      "nonplaque_iou": {
+        "ci_high": 0.8147880600035073,
+        "ci_low": 0.7664278002724416,
+        "mean": 0.7913934571617683
+      },
+      "npv": {
+        "ci_high": 0.8974290077169387,
+        "ci_low": 0.8457987181296183,
+        "mean": 0.8727969262595953
+      },
+      "plaque_dice": {
+        "ci_high": 0.6084247821363575,
+        "ci_low": 0.5277188224293783,
+        "mean": 0.5694412024618823
+      },
+      "plaque_iou": {
+        "ci_high": 0.45618033325402074,
+        "ci_low": 0.38533054157165675,
+        "mean": 0.4217187783467755
+      },
+      "ppv": {
+        "ci_high": 0.7041318128420276,
+        "ci_low": 0.6228047670866348,
+        "mean": 0.6636977434054216
+      },
+      "sensitivity": {
+        "ci_high": 0.6492574466518979,
+        "ci_low": 0.5375047133895515,
+        "mean": 0.5949267252929552
+      },
+      "specificity": {
+        "ci_high": 0.9207440847265448,
+        "ci_low": 0.8823827250341502,
+        "mean": 0.902980708531644
+      }
+    },
+    "sha256": "bd54c8b2301ba5b41ae9603d55433edf0592400689434a5cf9137ca37075c0eb"
+  },
+  "scope": "Code compatibility and fixed-artifact evaluation; paper reproduction remains open",
+  "source_sha256": {
+    "dentalpsam/__init__.py": "3b583bc0b1d52c8082a2863051955e091804e4aec44d4389b7a0db32e79a1359",
+    "dentalpsam/checkpoints.py": "644359bcd99e165100515006569f5f388bdea9cf5134acd9edf54685d59f215b",
+    "dentalpsam/data.py": "166238e38be701fb6d29267a01845681a9d83f41add534256c557cb9f3ae41a6",
+    "dentalpsam/evaluation.py": "55602eeb2c4b0ae8764215759236c7affd9fc76539e68131da8735e976fe7699",
+    "dentalpsam/mesh_targets.py": "74198f7d5823ac525ef4ca21f25513459d5610085638446087060fe9b8997525",
+    "dentalpsam/model.py": "33c0e2ced35f325d30000730a946b4cbd6dce0bcead4c369a68aa50072b9967b",
+    "dentalpsam/prediction_io.py": "2ec4937ee17915ebdbfd80aedbbce46f8dea41c2b17bb775eddd7d69f4394cdb",
+    "dentalpsam/segment_anything/__init__.py": "872ba9497b450a28fc19a783dfcf0a1e4116d2f5b26e9ce9c014647925fcd936",
+    "dentalpsam/segment_anything/automatic_mask_generator.py": "c818960c61c4f51d3f5a2286034d4b5f491e05ab1e84f3155756d9d031375d01",
+    "dentalpsam/segment_anything/build_sam.py": "41ae14df9165b7843020e5e3cfdb29747c541c86951fa3e5e27a0e3ea6c504ed",
+    "dentalpsam/segment_anything/modeling/__init__.py": "47f6363b86c0bfaa7a6abf723975136d17fae4a5f002d2814a5cce8834d18980",
+    "dentalpsam/segment_anything/modeling/common.py": "59a53bfa5d0a4d446df7f2bb57d2e95808b130601592b934600fb663d256ce17",
+    "dentalpsam/segment_anything/modeling/image_encoder.py": "951c428d8dee2be2e45a4f109bbf840eb43118219d9135d4335140061cbfee85",
+    "dentalpsam/segment_anything/modeling/mask_decoder.py": "60c4896757dda12885885eff36a2f90ba122fe8c99c67453b024bc2cac26573d",
+    "dentalpsam/segment_anything/modeling/prompt_encoder.py": "162ed40ba4b7021e3659f41b761c953cbb8eab83bf1f279c00c39964984c9052",
+    "dentalpsam/segment_anything/modeling/sam.py": "c8cd4a32f5aee1a44a393206e462afdd7fa1bb7265f4274cf0e8fd60ff8b68db",
+    "dentalpsam/segment_anything/modeling/transformer.py": "680c463c365bacb9304468f91addc8131d8de8aeb96bfc3e39ebb365f01a29a0",
+    "dentalpsam/segment_anything/predictor.py": "dfdd63c0a8b785e2d6b44a665e0d9f49ba275a733d17c3a938d832bcc577e422",
+    "dentalpsam/segment_anything/utils/__init__.py": "34bd8069c54764e7b8d73a78905dbe6467140a2f73170875128f6ca4d8cdd0aa",
+    "dentalpsam/segment_anything/utils/amg.py": "ba333540bf125fe5fe06396e9f1bcc53f603caa21856db6223b1e89a1c56b2c2",
+    "dentalpsam/segment_anything/utils/onnx.py": "6f939eb882441220f0b2700527e9048770cde34cee8f402fa75ae91a2e16708c",
+    "dentalpsam/segment_anything/utils/transforms.py": "5d64e083cc0f68dc59c20d75f49a21b306a772b8a35560b3287b5084a9e7711a",
+    "dentalpsam/uv_projection.py": "c4b0200af6d24ce0cbbd58047dc4a29be729473fea3f7abd4e42cecc4f16d726",
+    "evaluate_dentalpsam.py": "e5dc171caa966d43cc7fdcd0e73c0d57979ee51b1a63b876b5a6668904ee0b23",
+    "evaluate_tsgcnet.py": "afc2ffd00428fd4691d8b2a03a715407bcb28e6a485303b222bf0a6c974bff9b",
+    "export_tsgcnet_features.py": "75b7d1b31e1c4330f0f35ded9d8a5fa875f39320d96a47b2506d80ac8af0c18b",
+    "predict_dentalpsam.py": "94ff2c4385b88a76694e79e951545c4aa586d5502f0bb525cdd4a7a0bbe433a7",
+    "prepare_uv_views.py": "ab2b9e0f65f1ca85025345f8d08fafa28a4f0a10aad8d87d40f37c59e1e2a11f",
+    "tests/__init__.py": "fa152072a32063ae0edf13d5dce2d6b5e101f25a9cb41ba22eb34dd9bebb14bc",
+    "tests/test_data.py": "5a321f31a3a8c7a7b8c50aafd6a88d4caf794209f8bc2c28a4f6662a31cd0192",
+    "tests/test_evaluate_mesh.py": "fba33c94fdd11e994acb7d13f4e2c6f0b7915155cbae79dc99b4b3811ffdb3c1",
+    "tests/test_mesh_targets.py": "a1743e837d0eb9ab7b715050f9cf4bd84084ee40976b5b9a63ca8962f3cd66b5",
+    "tests/test_original_evaluation.py": "6d4003b232b6fa47b226e9af16c1dd15386b16072ce79d6912da5421a176a53b",
+    "tests/test_prediction_io.py": "f612c13710152bcdab86de706f17a8c4dbc37bcea3a20550803e4a2c9d08bdfd",
+    "tests/test_preflight_split.py": "b7f0bde76a68d2552fd31c73889f7334012e18f5e307b2276de0ed71666e5752",
+    "tests/test_probability_png.py": "9fd75c23df5e201224f7adc632010923831272726849606184d2f2f0642e0690",
+    "tests/test_sota_inputs.py": "beb240b86f1476126773e89c686314d07b55956fdd73ae15b0576bef2a4358f8",
+    "tools/__init__.py": "12508c57c69446dad5a7448e3fa2d9307f1169e556c036415878637c2b59e3d0",
+    "tools/audit_sota_inputs.py": "a232c62caa818459a4b3bed48513b953694860409ac2bd9cd7e7f9e14feef092",
+    "tools/check_git_payload.py": "a4f348486cf7a7bd72219857da2f00086375395adbf0fac04722927bd97961a4",
+    "tools/evaluate_mesh.py": "52cd68585ca7206630baa2ffb8c693bfc062ee38441ea6ccca3c04210b30f784",
+    "tools/fingerprint_tsgcnet.py": "839bedd649d3c0e910704e8b81dcdfab528e1f12075ebb10bea5b672218f0f92",
+    "tools/preflight_split.py": "35add6fb55b85026b8b6a777ff6a60c309092256a34b5f67b63dba842c70ccf3",
+    "tools/smoke_pipeline.py": "e7472bb9b544487b9fe86be248459503f0288c9bacf99d9bf2670e006d7b21df",
+    "tools/verify_server_compatibility.py": "8d9596bc9c3c37144d282f57e56ec9593a9b9cefc90ef35497e8a505d9ebb1ba",
+    "train_dentalpsam.py": "9cad59337b3b91cf705f1fb18c9e08c75a66da0819b8951d10819659236b024d",
+    "train_tsgcnet.py": "675bfc25644ee2f07899c7231de437e15c6ab5ceae4bebc12be681ae9eba038f",
+    "tsgcnet/__init__.py": "8e25d6ef428906735d9296f4758e66e7b3420ef537f35a1d010a80955a929b2d",
+    "tsgcnet/augmentation.py": "e0c3b0d9b0217ba084d5349db67129dd4e68f5121ad024e6511b10f7dcc2a75b",
+    "tsgcnet/data.py": "03a59b4c970cff26dbb3689f5fdf25a922cf1d2b01c8fd7eb18f1e2b6baef135",
+    "tsgcnet/model.py": "95306950c10fc59fee8cb7282158fb03b702e600de4fbdef13165880ade3fd6b",
+    "tsgcnet/utils.py": "43b133b7ad72213f112022ad2e113ad0244192006a1cb98cedcddfaf51cb81bc",
+    "validate_dentalpsam.py": "69d0b7074667a8df63079528aa07c566720dd6bd706293f0c194d532749d2612",
+    "validate_tsgcnet.py": "62a6c99b023fe4479c3166c3407ab473225c0ab7e7af6ee7838ef71bb978c837"
+  },
+  "synthetic_test_suites": 8
+}

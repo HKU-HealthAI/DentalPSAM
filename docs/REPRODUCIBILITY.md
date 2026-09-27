@@ -27,7 +27,14 @@ external directory.
 
 ## Computing environment
 
-Server checks on 2026-09-27 use the user-confirmed `py39_rt2` environment:
+The public environment specification is `environment.yml`. PyTorch,
+torchvision, and the CUDA runtime are installed through Conda; direct Python
+dependencies are pinned in `requirements.txt`. This is a reference environment,
+not a fully locked set of transitive dependencies. Fresh-environment creation
+has not yet been verified; the execution checks used the existing environment
+below. Installing a newer dependency stack is a separate compatibility test.
+
+Server checks on 2026-09-27 used the existing `py39_rt2` environment:
 Python 3.9.18, PyTorch 2.0.1, torchvision 0.15.2, MONAI 1.3.2,
 NumPy 1.26.4, OpenCV 4.10.0.84, Open3D 0.18.0, plyfile 1.1.3,
 pandas 2.3.3, patchify 0.2.3, scikit-learn 1.6.1, and tqdm 4.66.4.
@@ -57,6 +64,11 @@ policy. Exact cross-version or cross-GPU bitwise identity is not promised.
 
 ## Training compatibility boundary
 
+The main training workflow consumes prepared inputs from a fixed 3D feature
+checkpoint. It does not invoke a separate TSGCNet training run. The standalone
+TSGCNet scripts are for additional experiments, not prerequisites for testing
+or training DentalPSAM with the existing features.
+
 The clean training entry points are explicit, validation-only protocols;
 they are not verbatim copies of the historical trainers. In particular, the
 clean TSGCNet trainer uses NLL loss and validation-area selection, whereas the
@@ -64,3 +76,20 @@ inspected historical trainer used DiceFocal and external label-1 IoU selection.
 These changes must not be described as exact reproduction of historical
 training. Existing frozen checkpoints should first be tested with matched
 inference and the original evaluator; retraining is not required for that check.
+
+## Supplementary analysis
+
+`tools/evaluate_mesh.py` supports face/area/vertex comparisons. Edit
+`examples/evaluation_spec.json` to locate each method's saved predictions, then
+run the methods together on one declared cohort. Area metrics weight each
+triangle by its physical surface area; their participant-level aggregation
+differs from the original mesh-macro evaluator. Keep these results separate.
+
+`tools/audit_sota_inputs.py` checks geometry, face order, score direction, and
+agreement with independently exported scores. `tools/fingerprint_tsgcnet.py`
+compares checkpoint probabilities with cached feature scores without using
+test IoU for selection. These are provenance checks, not model-training steps.
+
+For a fresh-data integration check, use `tools/smoke_pipeline.py --help`.
+It executes all five stages on one mesh and records input hashes before and
+after execution. Such a check cannot establish full-cohort paper performance.

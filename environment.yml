@@ -1,0 +1,13 @@
+name: dentalpsam
+channels:
+  - pytorch
+  - nvidia
+  - conda-forge
+dependencies:
+  - python=3.9.18
+  - pip=24.2
+  - pytorch=2.0.1
+  - torchvision=0.15.2
+  - pytorch-cuda=11.7
+  - pip:
+      - -r requirements.txt

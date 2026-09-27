@@ -24,6 +24,7 @@ __pycache__/
 credentials*
 secrets*
 data/
+splits/
 Raw/
 derived/
 artifacts/
