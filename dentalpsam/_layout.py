@@ -18,6 +18,23 @@ PROCESSED_NAMES = {
 }
 
 
+def prepared_directories(root):
+    """Resolve public prepared-input names at the single disk-layout boundary.
+
+    Accept a split root, its processed/ directory, or a historical prepared
+    directory. Return semantic names so callers need no legacy-name knowledge.
+    """
+    root = Path(root).resolve()
+    public = root / "processed" if (root / "processed").is_dir() else root
+    historical = root / "manual_2D" if (root / "manual_2D").is_dir() else root
+    has_public = any((public / new).exists() for new in PROCESSED_NAMES.values())
+    has_historical = any((historical / old).exists() for old in ("SOTA_mesh", "label_mesh"))
+    if has_public and has_historical:
+        raise ValueError("Mixed public and historical prepared directories")
+    return {new: (public / new if has_public else historical / old)
+            for old, new in PROCESSED_NAMES.items()}
+
+
 @dataclass(frozen=True)
 class SplitLayout:
     root: Path

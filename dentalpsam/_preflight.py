@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Audit a ``manual_2D`` split before training or prediction.
+"""Audit prepared images and mesh patches before training or prediction.
 
 The tool is intentionally dependency-free and read-only with respect to the
 input split.  It verifies the four directories required by the public data
@@ -18,8 +18,10 @@ from collections import defaultdict
 from pathlib import Path
 from typing import Any
 
+from dentalpsam._layout import prepared_directories
 
-REQUIRED_DIRS = ("origin", "label", "SOTA_mesh", "label_mesh")
+
+REQUIRED_DIRS = ("images", "image_labels", "mesh_features", "mesh_labels")
 VIEW_PATTERN = re.compile(r"^(?P<mesh>.+)_(?P<view>[012])\.png$")
 
 
@@ -71,12 +73,13 @@ def inspect_split(data_dir: Path, participant_id_prefix_length: int | None = Non
     if participant_id_prefix_length is not None and participant_id_prefix_length <= 0:
         _fail("participant_id_prefix_length must be positive when supplied.")
 
-    split_dirs = {name: data_dir / name for name in REQUIRED_DIRS}
+    split_dirs = {name: path for name, path in prepared_directories(data_dir).items()
+                  if name in REQUIRED_DIRS}
     missing = [name for name, path in split_dirs.items() if not path.is_dir()]
     if missing:
         _fail(f"Missing required subdirectories in {data_dir}: {', '.join(missing)}")
 
-    labels = _read_labels(split_dirs["label"])
+    labels = _read_labels(split_dirs["image_labels"])
     mesh_ids = sorted(labels)
     expected_views = {0, 1, 2}
     missing_views = {
@@ -89,16 +92,16 @@ def inspect_split(data_dir: Path, participant_id_prefix_length: int | None = Non
 
     for mesh, views in labels.items():
         for label_name in views.values():
-            if not (split_dirs["origin"] / label_name).is_file():
-                _fail(f"Missing matching origin image for label {label_name!r}.")
-        for folder in ("SOTA_mesh", "label_mesh"):
+            if not (split_dirs["images"] / label_name).is_file():
+                _fail(f"Missing matching image for label {label_name!r}.")
+        for folder in ("mesh_features", "mesh_labels"):
             expected = split_dirs[folder] / f"{mesh}.npz"
             if not expected.is_file():
                 _fail(f"Missing {folder} file for mesh {mesh!r}: {expected}")
 
     mesh_file_names = {
         folder: sorted(path.name for path in split_dirs[folder].glob("*.npz"))
-        for folder in ("SOTA_mesh", "label_mesh")
+        for folder in ("mesh_features", "mesh_labels")
     }
     expected_mesh_files = [f"{mesh}.npz" for mesh in mesh_ids]
     for folder, files in mesh_file_names.items():
@@ -108,23 +111,23 @@ def inspect_split(data_dir: Path, participant_id_prefix_length: int | None = Non
                 f"Expected {len(expected_mesh_files)}, found {len(files)}."
             )
 
-    origin_files = sorted(path.name for path in split_dirs["origin"].glob("*.png"))
+    origin_files = sorted(path.name for path in split_dirs["images"].glob("*.png"))
     label_files = sorted(filename for views in labels.values() for filename in views.values())
     if origin_files != label_files:
-        _fail("origin must contain exactly the same PNG filenames as label.")
+        _fail("images must contain exactly the same PNG filenames as image_labels.")
 
     manifest: dict[str, Any] = {
-        "schema_version": 1,
+        "schema_version": 2,
         "data_dir": str(data_dir),
         "required_directories": list(REQUIRED_DIRS),
         "mesh_count": len(mesh_ids),
         "view_count": len(label_files),
         "mesh_ids_sha256": _sha256_lines(mesh_ids),
         "file_counts": {
-            "origin_png": len(origin_files),
-            "label_png": len(label_files),
-            "SOTA_mesh_npz": len(mesh_file_names["SOTA_mesh"]),
-            "label_mesh_npz": len(mesh_file_names["label_mesh"]),
+            "images_png": len(origin_files),
+            "image_labels_png": len(label_files),
+            "mesh_features_npz": len(mesh_file_names["mesh_features"]),
+            "mesh_labels_npz": len(mesh_file_names["mesh_labels"]),
         },
     }
     if participant_id_prefix_length is not None:
@@ -139,9 +142,9 @@ def inspect_split(data_dir: Path, participant_id_prefix_length: int | None = Non
 
 def main() -> None:
     parser = argparse.ArgumentParser(
-        description="Read-only validation and manifest generation for a manual_2D split."
+        description="Read-only checks of prepared images and mesh patches."
     )
-    parser.add_argument("--data-dir", required=True, type=Path, help="Path to manual_2D.")
+    parser.add_argument("--data-dir", required=True, type=Path, help="Split root or processed/ directory.")
     parser.add_argument(
         "--participant-id-prefix-length",
         type=int,

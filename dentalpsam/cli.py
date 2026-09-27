@@ -77,7 +77,7 @@ def test_main(argv=None):
     weights.add_argument(
         "--weights",
         type=Path,
-        help="Directory containing dentalpsam.pth, branch3d.pth, and sam.pth",
+        help="Directory containing dentalpsam.pth, branch3d.pth, sam.pth, and manifest.json",
     )
     weights.add_argument(
         "--checkpoint", type=Path, help="Advanced: explicit DentalPSAM checkpoint file"
@@ -92,6 +92,8 @@ def test_main(argv=None):
     runtime.add_argument("--device", default="cuda:0", help="PyTorch device")
     runtime.add_argument("--num-workers", type=int, default=0, help="DataLoader workers")
     advanced = parser.add_argument_group("Advanced overrides")
+    advanced.add_argument("--bundle-manifest", type=Path,
+                          help="Author-provided manifest for explicit checkpoint paths")
     advanced.add_argument(
         "--sam-checkpoint", type=Path, help="Advanced: override SAM initialization"
     )
@@ -100,7 +102,7 @@ def test_main(argv=None):
         "--3d-checkpoint",
         dest="branch_checkpoint",
         type=Path,
-        help="Advanced: explicitly regenerate inputs with these 3D weights",
+        help="Advanced: 3D weights, required to match the bundle manifest",
     )
     advanced.add_argument(
         "--mesh-list", type=Path, help="Advanced: override DATA/mesh_ids.txt"
@@ -113,6 +115,10 @@ def test_main(argv=None):
     if args.weights is not None:
         args.checkpoint = args.weights / "dentalpsam.pth"
         args.sam_checkpoint = args.sam_checkpoint or args.weights / "sam.pth"
+        args.branch_checkpoint = args.branch_checkpoint or args.weights / "branch3d.pth"
+        args.bundle_manifest = args.bundle_manifest or args.weights / "manifest.json"
+    elif args.bundle_manifest is None or args.branch_checkpoint is None or args.sam_checkpoint is None:
+        parser.error("Explicit --checkpoint requires --bundle-manifest, --branch-checkpoint and --sam-checkpoint")
     from dentalpsam.workflows import test_model
 
     try:

@@ -17,7 +17,7 @@ data/
     mesh_ids.txt
     meshes/<mesh_id>.ply
     labels/<mesh_id>.ply
-    processed/                       # optional prepared inputs
+    processed/                       # generated outputs; not trusted as cached inputs
       images/<mesh_id>_{0,1,2}.png
       image_labels/<mesh_id>_{0,1,2}.png
       mesh_features/<mesh_id>.npz
@@ -58,14 +58,18 @@ this repository. The pipeline does not perform uniform remeshing.
 
 ## Prepared inputs
 
-When `processed/` is absent, `test.py --weights checkpoints` generates the
-necessary views and features using the fixed 3D checkpoint. New files are
-written under the result directory, never into the original dataset.
-When prepared inputs are supplied, all five subdirectories must be complete;
-a partial directory is an error, not a request to silently regenerate it.
+`test.py --weights checkpoints` always generates fresh views and features
+using the verified bundle's 3D checkpoint. Existing `processed/` data are not
+read, even when complete. New files are written under the result directory,
+never into the original dataset. Stage-2 training likewise requires an explicit
+3D checkpoint and regenerates its inputs. There is no public cache-reuse switch.
 
-Prepared features must come from the checkpoint associated with the trained
-DentalPSAM model. A different 3D checkpoint is not an interchangeable input.
+The bundle manifest must bind DentalPSAM, SAM and 3D weights by SHA-256 and
+declare the architecture. After preparation, the exporter record must match
+both the verified checkpoint hash and the fixed mesh-list hash. Original mesh
+content, source-code and generated-output hashes are recorded by the exporter.
+Hashes guard file identity; only the authors or an actual training record can
+establish that a historical set of weights belongs together.
 
 | Directory | File contract |
 | --- | --- |
@@ -103,8 +107,8 @@ This software contract does not itself establish reproduction of paper values.
 | Message or symptom | What to check |
 | --- | --- |
 | Missing test list | Place the supplied `mesh_ids.txt` inside `data/test`. |
-| Missing checkpoint | Check the three filenames in `checkpoints/` and that the weights belong to the same model run. |
-| Incomplete prepared inputs | Supply all five `processed/` subdirectories. If you intend to regenerate inputs, explicitly pass `--branch-checkpoint checkpoints/branch3d.pth`; the new files stay under the result directory. |
+| Missing checkpoint or bundle manifest | Obtain all three matching weight files and the author-provided `manifest.json`. |
+| Bundle mismatch | Do not recompute hashes to bypass it. Restore the exact bundle declared by the authors or training run. |
 | Output already exists | Choose a new `--output` directory; previous results are not overwritten. |
 | Training and validation participants overlap | Correct the split assignment so every participant belongs to only one split. Do not drop cases based on performance. |
 

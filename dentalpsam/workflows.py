@@ -65,7 +65,7 @@ def prepare_split(data, mesh_list, checkpoint, output, device):
 
 
 def train_model(args):
-    """Adapt directory names, then call the unchanged stage-specific trainer."""
+    """Prepare fresh inputs with declared weights, then call the trainer."""
     roots = [args.train_dir.resolve(), args.val_dir.resolve()]
     target = (args.out_dir if args.stage == "3d" else args.save_dir).resolve()
     if target.exists():
@@ -73,6 +73,8 @@ def train_model(args):
     if any(target == root or root in target.parents for root in roots):
         raise ValueError("Training output must be outside the source data")
     branch = getattr(args, "branch_checkpoint", None)
+    if args.stage == "dentalpsam" and branch is None:
+        raise ValueError("DentalPSAM training requires --branch-checkpoint; unknown cached features are not accepted")
     if args.stage == "dentalpsam" and not args.sam_checkpoint.is_file():
         raise FileNotFoundError(f"SAM initialization not found: {args.sam_checkpoint}")
     if branch is not None and not branch.is_file():
@@ -80,25 +82,8 @@ def train_model(args):
 
     layouts, names = [], []
     for root in roots:
-        # Explicit historical prepared-directory arguments remain compatible.
-        direct = (
-            args.stage == "dentalpsam"
-            and branch is None
-            and (root / "SOTA_mesh").is_dir()
-        )
-        layout = None if direct else SplitLayout.read(root)
-        if (
-            layout is not None
-            and args.stage == "dentalpsam"
-            and branch is None
-            and not layout.prepared()
-        ):
-            raise FileNotFoundError(
-                "Prepared inputs missing; supply --branch-checkpoint"
-            )
-        labels = root / "label_mesh" if direct else layout.labels
-        suffix = "*.npz" if direct else "*.ply"
-        names.append(sorted(path.stem for path in labels.glob(suffix)))
+        layout = SplitLayout.read(root)
+        names.append(sorted(path.stem for path in layout.labels.glob("*.ply")))
         layouts.append(layout)
     if not all(names):
         raise ValueError(
@@ -111,14 +96,12 @@ def train_model(args):
     if branch is not None or any(layout and layout.public for layout in layouts):
         workspace = fresh_directory(target.with_name(target.name + "_inputs"), roots)
     prepared = []
+    preparation_records = {}
     for kind, root, layout, ids in zip(("train", "val"), roots, layouts, names):
-        if layout is None:
-            prepared.append(root)
-            continue
         source = (
             layout.legacy_view(
                 workspace / f"source_{kind}",
-                include_processed=args.stage != "3d" and branch is None,
+                include_processed=False,
             )
             if layout.public
             else root
@@ -130,15 +113,32 @@ def train_model(args):
             source = prepare_split(
                 source, mesh_list, branch, workspace / kind, args.device
             )
+            from dentalpsam.mesh_io import sha256_file
+            export_record = workspace / kind / "features/export_manifest.json"
+            record = json.loads(export_record.read_text())
+            if record.get("checkpoint_sha256") != sha256_file(branch) or record.get("status") != "completed":
+                raise ValueError("Generated training features do not match the declared 3D weights")
+            preparation_records[kind] = sha256_file(export_record)
         prepared.append(source if args.stage == "3d" else source / "manual_2D")
     args.train_dir, args.val_dir = prepared
     if args.stage == "3d":
         from dentalpsam.branch3d.training import run_training
     else:
         from dentalpsam.training import run_training
+        from dentalpsam.mesh_io import sha256_file
+        args.input_provenance = {
+            "branch3d_sha256": sha256_file(branch),
+            "sam_sha256": sha256_file(args.sam_checkpoint),
+            "mesh_fusion": args.mesh_fusion,
+            "prepared_export_manifests": preparation_records,
+        }
     print(f"Training {'the 3D branch' if args.stage == '3d' else 'DentalPSAM'}: {target}",
           flush=True)
     run_training(args)
+    if args.stage == "dentalpsam":
+        from dentalpsam.bundle import write_training_bundle_manifest
+        write_training_bundle_manifest(target / "manifest.json", target / "best_model.pth",
+                                       branch, args.sam_checkpoint)
 
 
 def test_model(args):
@@ -147,17 +147,12 @@ def test_model(args):
     from dentalpsam.inference import predict_split
     from dentalpsam.reporting import evaluate_predictions
     from dentalpsam._preflight import inspect_split
+    from dentalpsam.bundle import verify_bundle
 
     data = args.data.expanduser().resolve()
+    bundle = verify_bundle(args.bundle_manifest, args.checkpoint,
+                           args.branch_checkpoint, args.sam_checkpoint)
     layout = SplitLayout.read(data)
-    prepared = layout.prepared() if args.branch_checkpoint is None else False
-    if not prepared and args.branch_checkpoint is None:
-        weights = getattr(args, "weights", None)
-        if weights is None:
-            raise FileNotFoundError(
-                "Prepared inputs missing; supply --weights or --branch-checkpoint"
-            )
-        args.branch_checkpoint = weights / "branch3d.pth"
     mesh_list = args.mesh_list or data / "mesh_ids.txt"
     sam = args.sam_checkpoint or args.checkpoint.parent / "sam_vit_b_01ec64.pth"
     for role, path in (("DentalPSAM checkpoint", args.checkpoint),
@@ -170,6 +165,7 @@ def test_model(args):
     if args.branch_checkpoint is not None and not args.branch_checkpoint.is_file():
         raise FileNotFoundError(f"3D branch checkpoint not found: {args.branch_checkpoint}")
     output = fresh_directory(args.output, [data])
+    (output / "bundle_manifest.json").write_text(json.dumps(bundle, indent=2, sort_keys=True) + "\n")
     print(
         f"DentalPSAM: evaluating {len(ids)} meshes; progress log: {output / 'run.log'}",
         flush=True,
@@ -182,9 +178,8 @@ def test_model(args):
             print(message, file=console, flush=True)
             print(message, flush=True)
 
-        progress("[1/3] Preparing model inputs" if not prepared
-                 else "[1/3] Checking prepared model inputs")
-        data = layout.legacy_view(output / ".inputs", include_processed=prepared)
+        progress("[1/3] Regenerating inputs with verified bundle weights (existing caches are not reused)")
+        data = layout.legacy_view(output / ".inputs", include_processed=False)
         if args.branch_checkpoint is not None:
             data = prepare_split(
                 data,
@@ -199,7 +194,16 @@ def test_model(args):
                 (output / "processed" / new).symlink_to(
                     data / "manual_2D" / old, target_is_directory=True
                 )
-        inspect_split(data / "manual_2D", participant_id_prefix_length=4)
+        inspect_split(output / "processed", participant_id_prefix_length=4)
+        from dentalpsam.mesh_io import sha256_file
+        export_record = json.loads((output / ".prepared/features/export_manifest.json").read_text())
+        if (export_record.get("status") != "completed"
+                or export_record.get("checkpoint_sha256") != bundle["branch3d_sha256"]
+                or export_record.get("mesh_list_sha256") != sha256_file(mesh_list)
+                or export_record.get("mesh_count") != len(ids)):
+            raise ValueError("Generated features do not match the verified weights and fixed mesh list")
+        # Catch replacement of a weight file during a long preparation stage.
+        verify_bundle(args.bundle_manifest, args.checkpoint, args.branch_checkpoint, sam)
         progress("[2/3] Running DentalPSAM prediction")
         predict_split(
             Namespace(

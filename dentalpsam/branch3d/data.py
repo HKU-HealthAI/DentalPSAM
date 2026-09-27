@@ -91,11 +91,11 @@ def load_ply_features(path=""):
         or max_face_index > max_normal_index
         or max_face_index > max_color_index
     ):
-        print(f"警告: 文件 {path} 中索引超出范围")
-        print(f"  面片最大索引: {max_face_index}")
-        print(f"  顶点数组大小: {max_vertex_index + 1}")
-        print(f"  法向量数组大小: {max_normal_index + 1}")
-        print(f"  颜色数组大小: {max_color_index + 1}")
+        print(f"Warning: out-of-range face indices in {path}")
+        print(f"  Maximum face vertex index: {max_face_index}")
+        print(f"  Vertex count: {max_vertex_index + 1}")
+        print(f"  Normal count: {max_normal_index + 1}")
+        print(f"  Colour count: {max_color_index + 1}")
 
         valid_mask = (
             (index_face[:, 0] <= max_vertex_index)
@@ -115,10 +115,10 @@ def load_ply_features(path=""):
 
         n_valid_faces = np.sum(valid_mask)
         if n_valid_faces == 0:
-            print(f"错误: 文件 {path} 没有有效的面片")
+            print(f"Error: no valid faces in {path}")
             return None, None, None, None, None
 
-        print(f"保留 {n_valid_faces}/{n_face} 个有效面片")
+        print(f"Keeping {n_valid_faces}/{n_face} valid faces")
         index_face = index_face[valid_mask]
         faces = faces[valid_mask]
         n_face = n_valid_faces
@@ -155,7 +155,7 @@ def load_ply_features(path=""):
             axis=1,
         )
     except Exception as e:
-        print(f"错误: 文件 {path} 在处理面片数据时出错: {e}")
+        print(f"Error processing face data in {path}: {e}")
         return None, None, None, None, None
 
     x1, y1, z1 = xyz_face[:, 0], xyz_face[:, 1], xyz_face[:, 2]
@@ -234,10 +234,10 @@ class PlyDataset(Dataset):
                 enable_rotation=False,
                 rotation_range=(-10, 10),
             )
-            print(f"数据增强已启用: 翻转概率={flip_prob}")
+            print(f"Augmentation enabled: flip probability={flip_prob}")
         else:
             self.augmenter = None
-            print("数据增强已禁用")
+            print("Augmentation disabled")
 
     def __len__(self):
         return len(self.file_list)

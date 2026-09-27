@@ -54,3 +54,22 @@ def test_adapter_cannot_write_inside_input(tmp_path):
     root = make_layout(tmp_path / "input", True, True)
     with pytest.raises(ValueError, match="outside"):
         SplitLayout.read(root).legacy_view(root / "view")
+
+
+def test_preflight_accepts_public_processed_names(tmp_path):
+    from dentalpsam._preflight import inspect_split
+    from tests.test_preflight_split import populate_valid_split
+
+    historical = tmp_path / "historical"
+    populate_valid_split(historical)
+    public = tmp_path / "public/processed"
+    public.mkdir(parents=True)
+    for old, new in PROCESSED_NAMES.items():
+        if (historical / old).exists():
+            (public / new).symlink_to(historical / old, target_is_directory=True)
+    legacy = inspect_split(historical, 4)
+    for root in (public, public.parent):
+        observed = inspect_split(root, 4)
+        assert observed["mesh_ids_sha256"] == legacy["mesh_ids_sha256"]
+        assert observed["participant_count"] == 1
+        assert observed["required_directories"] == ["images", "image_labels", "mesh_features", "mesh_labels"]

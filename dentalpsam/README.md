@@ -41,13 +41,13 @@ after predictions are restored to the original faces—not inside the BMT.
 ## How the pieces fit
 
 `test.py` calls `cli.test_main()`, then `workflows.test_model()`. The workflow
-checks the fixed evaluation list and checkpoint files, prepares missing views
+checks the fixed evaluation list and bundle hashes, regenerates views
 and 3D features, runs DentalPSAM, and evaluates the saved predictions. Outputs
 go to a new directory; the original meshes and annotations are never rewritten.
 
 `train.py --stage 3d` calls the 3D branch trainer. Its selected checkpoint
 provides the frozen mesh features used by `train.py --stage dentalpsam`.
-The second stage prepares those inputs when requested and trains the joint
+The second stage requires an explicit 3D checkpoint, regenerates inputs, and trains the joint
 model. See [Training](../docs/TRAINING.md) for selection rules and defaults.
 
 The public dataset names are adapted by [_layout.py](_layout.py) to existing
@@ -80,11 +80,22 @@ are outside the installed package.
 
 The weight bundle contains `sam.pth` (SAM ViT-B initialization, originally
 `sam_vit_b_01ec64.pth`), `branch3d.pth` (the fixed 3D feature generator), and
-`dentalpsam.pth` (task-trained model weights). Prepared features and DentalPSAM
-weights must come from compatible runs. Only load trusted checkpoint files.
+`dentalpsam.pth` (task-trained model weights), plus `manifest.json` binding all
+three SHA-256 values and the gated/concat variant. [bundle.py](bundle.py) checks
+these before preparation. New training checkpoints also embed their input-weight
+hashes; conflicting manifests cannot override them. Public testing always
+regenerates inputs and never trusts an existing prepared cache. Only load trusted
+checkpoint files; hashes are not a substitute for trusted provenance.
 
 Dependency ranges are specified in [pyproject.toml](../pyproject.toml). Server
 checks used Python 3.9.18, PyTorch 2.0.1 / CUDA 11.7, torchvision 0.15.2,
 NumPy 1.26.4, MONAI 1.3.2, OpenCV 4.10.0.84, Open3D 0.18.0, plyfile 1.1.3,
 pandas 2.3.3, patchify 0.2.3, scikit-learn 1.6.1, and tqdm 4.66.4 on an
 NVIDIA RTX 3090. Supported dependency ranges are not a tested version matrix.
+
+Environment caveat: the server also has `opencv-python-headless` 4.12.0.88;
+the imported `cv2` reports 4.12.0 despite `opencv-python` metadata reporting
+4.10.0.84. Its package check reports dependency conflicts, so this shared runtime
+is not a clean installation lockfile. Do not install both OpenCV distributions
+in a fresh environment. The CI environment resolves the package constraints
+independently; other Python/CUDA combinations have not been validated.

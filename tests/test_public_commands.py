@@ -58,7 +58,8 @@ def test_weight_directory_resolves_named_files(monkeypatch):
     args = received[0]
     assert args.checkpoint == Path("weights/dentalpsam.pth")
     assert args.sam_checkpoint == Path("weights/sam.pth")
-    assert args.branch_checkpoint is None  # Required only if inputs need preparation.
+    assert args.branch_checkpoint == Path("weights/branch3d.pth")
+    assert args.bundle_manifest == Path("weights/manifest.json")
 
 
 def test_joint_training_minimal_command(monkeypatch):

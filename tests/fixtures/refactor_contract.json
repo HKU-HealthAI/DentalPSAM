@@ -212,7 +212,9 @@
     {
       "module": "dentalpsam/branch3d/data.py",
       "name": null,
-      "ast_sha256": "de60aa8d05fc93cc7f97e63837287c8d41b0f718ace6a6d0fba989704868aaa5"
+      "ast_sha256": "2d5a712952185e392600dee5ecb018df29af95b23b5b8e0651fb3ac71f20ea46",
+      "previous_ast_sha256": "de60aa8d05fc93cc7f97e63837287c8d41b0f718ace6a6d0fba989704868aaa5",
+      "reviewed_change": "2026-09-28: translate print messages to English only; normalized AST and real-loader array parity checked against ae04a73. No loading, label, ordering or normalization changes."
     },
     {
       "module": "dentalpsam/mesh_io.py",

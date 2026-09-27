@@ -1,0 +1,20 @@
+cff-version: 1.2.0
+message: "If you use this work, please cite the DentalPSAM MICCAI paper."
+title: "DentalPSAM: Lifting SAM to Dental Plaque Segmentation with Hybrid 2D-3D Knowledge Fusion"
+type: software
+authors:
+  - family-names: Jiang
+    given-names: Haoning
+  - family-names: Fok
+    given-names: Rachel Melissa
+  - family-names: Zhang
+    given-names: Xiangcheng
+  - family-names: Sun
+    given-names: Ruitong
+  - family-names: Yeung
+    given-names: Jonathan Hok Kan
+  - family-names: Deng
+    given-names: Ke
+  - family-names: Qu
+    given-names: Liangqiong
+repository-code: "https://github.com/HKU-HealthAI/DentalPSAM"

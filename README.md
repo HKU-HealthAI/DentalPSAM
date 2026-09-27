@@ -11,6 +11,17 @@ DentalPSAM combines a geometry-enhanced 2D SAM branch and an appearance-enhanced
 Architecture shown in the MICCAI paper. The implementation guide is
 [inside the package](dentalpsam/README.md).
 
+## Release status
+
+| Resource | Status |
+| --- | --- |
+| Code | Public research implementation; licensing review pending |
+| Dataset | Being organized; not publicly released |
+| Task checkpoints | Not publicly released; contact the authors |
+
+Third-party redistribution permission is unresolved; this is not yet a licensed
+open-source release. See [Third-party notices](THIRD_PARTY_NOTICES.md).
+
 ## Dataset
 
 The dataset is being organized and is not publicly released yet.
@@ -21,16 +32,27 @@ See [Dataset](docs/DATASET.md) for the input layout and annotations.
 
 ## Installation
 
-Use Python 3.9–3.11 and run from the repository root:
+Tested on Linux with Python 3.9.18, PyTorch 2.0.1, CUDA 11.7 and an RTX 3090.
+Use Python 3.9 and install PyTorch for your CUDA environment first. For the
+tested CUDA version:
 
 ```bash
+python -m pip install torch==2.0.1 torchvision==0.15.2 --index-url https://download.pytorch.org/whl/cu117
 git clone https://github.com/HKU-HealthAI/DentalPSAM.git
 cd DentalPSAM
 python -m pip install -e .
 ```
 
-Model execution requires a compatible PyTorch environment; the reference
-server uses Python 3.9, PyTorch 2.0, and an NVIDIA GPU.
+Other Python/PyTorch/CUDA combinations have not been validated. Dependency
+ranges in `pyproject.toml` are installation constraints, not a tested matrix.
+For a software installation check without study data or weights:
+
+```bash
+python -m pip install -e ".[dev]"
+pytest -q
+```
+
+These are software-contract tests, not a model-performance benchmark.
 
 ## Test
 
@@ -45,6 +67,7 @@ checkpoints/
   dentalpsam.pth
   branch3d.pth
   sam.pth
+  manifest.json     # author-provided binding of all three weights
 ```
 
 Task-trained checkpoints are not publicly released yet. Once available to you:
@@ -53,12 +76,15 @@ Task-trained checkpoints are not publicly released yet. Once available to you:
 python test.py --data data/test --weights checkpoints --output results
 ```
 
-This one command prepares inputs as needed, predicts, and evaluates; no manual
+This command verifies the bundle hashes and architecture, regenerates inputs
+from the matched 3D weights, predicts, and evaluates; no manual
 feature export is needed. Read `results/summary.txt` for the scores and 95% CIs,
 or `results/metrics.json` for machine-readable results. Stage progress appears
 in the terminal; detailed output is in `results/run.log`.
 Use a new output directory for each run. Input data are never overwritten.
 Testing does not require retraining. Use `python test.py --help` for options.
+Existing prepared caches are not reused. A missing or mismatched bundle manifest
+stops the run before preprocessing. See [bundle requirements](docs/TRAINING.md#weight-bundles).
 
 ## Train
 
@@ -82,6 +108,9 @@ Place SAM initialization at `checkpoints/sam.pth` before stage 2. Stage 1 saves
 `outputs/3d/best.pth`; stage 2 prepares its 3D inputs automatically and saves
 `outputs/dentalpsam/best_model.pth`.
 See [Training](docs/TRAINING.md) for prerequisites and options.
+The trainers are reference/reconstructed implementations; the
+[protocol audit](docs/TRAINING.md#relationship-to-the-paper-experiments) identifies
+historically supported settings and deliberate changes.
 
 ## MICCAI results
 

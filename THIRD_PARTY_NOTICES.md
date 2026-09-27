@@ -16,8 +16,20 @@ with:
 - Y. Zhao et al., “Two-Stream Graph Convolutional Network for Intra-Oral
   Scanner Image Segmentation,” IEEE TMI, 2022.
 
-The copied TSGCNet server tree did not contain a license file. Redistribution
-terms for that component and the final DentalPSAM project license must be
-confirmed by the repository owner before creating a formal release tag. No
-license is implied for patient data or model checkpoints; neither is included
-in this repository.
+The copied server tree and the inspected
+[upstream TSGCNet repository](https://github.com/zhanglingming1/tsgcnet) did not
+provide a license establishing redistribution permission. Public visibility
+alone is not an open-source license; see
+[GitHub's licensing guidance](https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/licensing-a-repository).
+
+Redistribution authorization remains **unresolved**, including for the current
+public source distribution, not only for a future release tag. The repository
+owner needs applicable license evidence or explicit permission from the rights
+holder before treating this component as cleared for distribution. Alternatively,
+replacement would require a separately scoped independent implementation and
+compatibility review. Adding a DentalPSAM license would not relicense the
+third-party code. No permission or legal clearance is asserted here.
+
+The project license is also undecided. SAM's retained Apache-2.0 notice applies
+to its covered components only. Patient data and model checkpoints are not
+distributed, and no license for them is implied.

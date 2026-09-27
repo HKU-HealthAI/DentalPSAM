@@ -237,6 +237,11 @@ def run_training(args) -> None:
         raise NotADirectoryError("Training and validation directories must exist.")
     if not sam_checkpoint.is_file():
         raise FileNotFoundError(sam_checkpoint)
+    provenance = getattr(args, "input_provenance", None)
+    if not isinstance(provenance, dict) or provenance.get("sam_sha256") != sha256_file(sam_checkpoint):
+        raise ValueError("Training requires verified input provenance; use train.py with --branch-checkpoint")
+    if provenance.get("mesh_fusion") != args.mesh_fusion:
+        raise ValueError("Training provenance does not match mesh_fusion")
 
     output_dir = prepare_output_directory(args.save_dir, (train_dir, val_dir))
     split_contract = inspect_patient_split(
@@ -255,6 +260,7 @@ def run_training(args) -> None:
         "val_dir": str(val_dir),
         "sam_checkpoint": str(sam_checkpoint),
         "sam_checkpoint_sha256": sha256_file(sam_checkpoint),
+        "input_provenance": provenance,
         "split_contract": split_contract,
         "epochs": args.epochs,
         "batch_size": args.batch_size,
@@ -353,6 +359,7 @@ def run_training(args) -> None:
                 "epoch": epoch,
                 "model_state_dict": model.state_dict(),
                 "validation_metrics": val_metrics,
+                "input_provenance": provenance,
             }
             if epoch % args.save_every == 0:
                 torch.save(checkpoint_payload, output_dir / f"checkpoint_epoch_{epoch:03d}.pth")

@@ -48,7 +48,7 @@ def main() -> None:
         assert len(manifest["mesh_ids_sha256"]) == 64
 
         (split / "origin" / "000102_2.png").unlink()
-        expect_value_error(lambda: inspect_split(split), "Missing matching origin image")
+        expect_value_error(lambda: inspect_split(split), "Missing matching image")
     print("ok preflight split self-test")
 
 
