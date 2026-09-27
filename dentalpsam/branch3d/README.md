@@ -25,7 +25,7 @@ Stage 1 selects `outputs/3d/best.pth` using validation data only. Stage 2 also
 requires SAM initialization at `checkpoints/sam.pth` and generates the 3D
 inputs automatically. Original meshes and annotations are not overwritten.
 
-For testing a trained model, put its matching weights in the bundle described
+For testing a trained model, arrange its matching weights as described
 in the [main README](../../README.md#test), then run:
 
 ```bash

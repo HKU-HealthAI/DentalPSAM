@@ -67,7 +67,7 @@ checkpoints/
   dentalpsam.pth
   branch3d.pth
   sam.pth
-  manifest.json     # author-provided binding of all three weights
+  manifest.json     # model information supplied with the weights
 ```
 
 Task-trained checkpoints are not publicly released yet. Once available to you:
@@ -76,15 +76,13 @@ Task-trained checkpoints are not publicly released yet. Once available to you:
 python test.py --data data/test --weights checkpoints --output results
 ```
 
-This command verifies the bundle hashes and architecture, regenerates inputs
-from the matched 3D weights, predicts, and evaluates; no manual
-feature export is needed. Read `results/summary.txt` for the scores and 95% CIs,
+This command prepares the inputs, runs DentalPSAM, and evaluates the predictions;
+no manual feature export is needed. Read `results/summary.txt` for the scores and 95% CIs,
 or `results/metrics.json` for machine-readable results. Stage progress appears
 in the terminal; detailed output is in `results/run.log`.
 Use a new output directory for each run. Input data are never overwritten.
 Testing does not require retraining. Use `python test.py --help` for options.
-Existing prepared caches are not reused. A missing or mismatched bundle manifest
-stops the run before preprocessing. See [bundle requirements](docs/TRAINING.md#weight-bundles).
+Keep all files supplied with the weights together in `checkpoints/`.
 
 ## Train
 
@@ -108,9 +106,6 @@ Place SAM initialization at `checkpoints/sam.pth` before stage 2. Stage 1 saves
 `outputs/3d/best.pth`; stage 2 prepares its 3D inputs automatically and saves
 `outputs/dentalpsam/best_model.pth`.
 See [Training](docs/TRAINING.md) for prerequisites and options.
-The trainers are reference/reconstructed implementations; the
-[protocol audit](docs/TRAINING.md#relationship-to-the-paper-experiments) identifies
-historically supported settings and deliberate changes.
 
 ## MICCAI results
 

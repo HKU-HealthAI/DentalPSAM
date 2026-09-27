@@ -41,7 +41,7 @@ after predictions are restored to the original faces—not inside the BMT.
 ## How the pieces fit
 
 `test.py` calls `cli.test_main()`, then `workflows.test_model()`. The workflow
-checks the fixed evaluation list and bundle hashes, regenerates views
+checks the fixed evaluation list and model files, generates views
 and 3D features, runs DentalPSAM, and evaluates the saved predictions. Outputs
 go to a new directory; the original meshes and annotations are never rewritten.
 
@@ -78,14 +78,13 @@ are outside the installed package.
 
 ## Weights and environment
 
-The weight bundle contains `sam.pth` (SAM ViT-B initialization, originally
+The weights directory contains `sam.pth` (SAM ViT-B initialization, originally
 `sam_vit_b_01ec64.pth`), `branch3d.pth` (the fixed 3D feature generator), and
-`dentalpsam.pth` (task-trained model weights), plus `manifest.json` binding all
-three SHA-256 values and the gated/concat variant. [bundle.py](bundle.py) checks
-these before preparation. New training checkpoints also embed their input-weight
-hashes; conflicting manifests cannot override them. Public testing always
-regenerates inputs and never trusts an existing prepared cache. Only load trusted
-checkpoint files; hashes are not a substitute for trusted provenance.
+`dentalpsam.pth` (task-trained model weights), plus `manifest.json` with the
+model information. Keep these files together. Compatibility checks run
+automatically before input preparation; users do not need to configure them.
+Testing generates fresh inputs with the selected 3D checkpoint.
+Only load checkpoint files from trusted sources.
 
 Dependency ranges are specified in [pyproject.toml](../pyproject.toml). Server
 checks used Python 3.9.18, PyTorch 2.0.1 / CUDA 11.7, torchvision 0.15.2,

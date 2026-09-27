@@ -119,6 +119,23 @@ def test_test_help_explains_files_and_outputs(capsys):
     help_text = capsys.readouterr().out
     for text in ("mesh_ids.txt", "summary.txt", "run.log", "Advanced overrides"):
         assert text in help_text
+    assert "--model-info" in help_text
+    for text in ("bundle", "sha256", "sha-256"):
+        assert text not in help_text.lower()
+
+
+@pytest.mark.parametrize("option", ["--model-info", "--bundle-manifest"])
+def test_explicit_weights_accept_model_information_and_previous_option(monkeypatch, option):
+    from dentalpsam import workflows
+
+    received = []
+    monkeypatch.setattr(workflows, "test_model", received.append)
+    run_test_command([
+        "--data", "data/test", "--output", "results", "--checkpoint", "model.pth",
+        "--branch-checkpoint", "branch.pth", "--sam-checkpoint", "sam.pth",
+        option, "manifest.json",
+    ])
+    assert received[0].bundle_manifest == Path("manifest.json")
 
 
 @pytest.mark.parametrize("stage,checkpoint", [("3d", "best.pth"), ("dentalpsam", "best_model.pth")])

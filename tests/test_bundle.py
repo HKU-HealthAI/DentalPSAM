@@ -36,8 +36,10 @@ def test_matching_bundle_roundtrip(tmp_path, variant):
 def test_substituting_any_weight_is_rejected_before_loading(tmp_path, index):
     paths = weights(tmp_path / "weights")
     paths[index].write_bytes(b"different checkpoint")
-    with pytest.raises(ValueError, match="Bundle mismatch"):
+    with pytest.raises(ValueError, match="Model files do not match") as error:
         verify_bundle(*paths)
+    assert "bundle" not in str(error.value).lower()
+    assert "sha256" not in str(error.value).lower()
 
 
 def test_rehashing_wrong_branch_does_not_bypass_embedded_training_binding(tmp_path):
@@ -46,7 +48,7 @@ def test_rehashing_wrong_branch_does_not_bypass_embedded_training_binding(tmp_pa
     declared = json.loads(manifest.read_text())
     declared["branch3d_sha256"] = sha256_file(branch)
     manifest.write_text(json.dumps(declared))
-    with pytest.raises(ValueError, match="training binding"):
+    with pytest.raises(ValueError, match="Training inputs do not match"):
         verify_bundle(manifest, model, branch, sam)
 
 
@@ -63,12 +65,12 @@ def test_cannot_automatically_certify_unbound_historical_weights(tmp_path):
     paths = weights(tmp_path / "weights")
     value = torch.load(paths[1], map_location="cpu")
     torch.save(value["model_state_dict"], paths[1])
-    with pytest.raises(ValueError, match="author verification"):
+    with pytest.raises(ValueError, match="from the authors"):
         write_training_bundle_manifest(tmp_path / "new.json", *paths[1:])
     declared = json.loads(paths[0].read_text())
     declared["dentalpsam_sha256"] = sha256_file(paths[1])
     paths[0].write_text(json.dumps(declared))
-    with pytest.raises(ValueError, match="lacks the training binding"):
+    with pytest.raises(ValueError, match="missing the expected training information"):
         verify_bundle(*paths)
 
 
@@ -82,7 +84,7 @@ def test_bad_bundle_stops_before_preprocessing_and_output_creation(tmp_path, mon
     args = Namespace(data=tmp_path / "data", checkpoint=tmp_path / "dentalpsam.pth",
                      branch_checkpoint=tmp_path / "branch3d.pth", sam_checkpoint=tmp_path / "sam.pth",
                      bundle_manifest=tmp_path / "missing.json", output=tmp_path / "results")
-    with pytest.raises(FileNotFoundError, match="manifest missing"):
+    with pytest.raises(FileNotFoundError, match="Model information missing"):
         workflows.test_model(args)
     assert not args.output.exists()
 

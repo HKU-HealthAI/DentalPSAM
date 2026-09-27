@@ -178,7 +178,7 @@ def test_model(args):
             print(message, file=console, flush=True)
             print(message, flush=True)
 
-        progress("[1/3] Regenerating inputs with verified bundle weights (existing caches are not reused)")
+        progress("[1/3] Preparing views and 3D features")
         data = layout.legacy_view(output / ".inputs", include_processed=False)
         if args.branch_checkpoint is not None:
             data = prepare_split(
