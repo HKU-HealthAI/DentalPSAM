@@ -1,5 +1,28 @@
 # MICCAI paper targets and reproduction boundary
 
+## Separate scientific reproduction gate
+
+Status: **not passed**. This gate is not a condition for the current
+[Repository Release Gate](../ACCEPTANCE.md). Repository organization, help
+commands, synthetic tests, and checkpoint compatibility do not reproduce
+paper metrics. Do not start training or select checkpoints merely to close a
+repository-readability task.
+
+For later scientific acceptance, bind the upstream feature checkpoint, score
+convention, normalization, prepared mesh inputs, and DentalPSAM checkpoint as
+one chain. Evaluate every declared mesh using the original equal-triangle
+protocol and match the paper's reported precision. The feature-model target is
+also independent: plaque IoU .476, Dice .626, OA .807, plus the non-plaque and
+mean-class entries below. Record source revision, commands, environment,
+participant split, input and checkpoint hashes, complete predictions, per-mesh
+metrics, and aggregate results. Execute on the designated validation server
+with original data read-only and a new output directory.
+
+No change of cohort, scoring unit, threshold, or selected cases closes this
+gate. If the source artifacts cannot be recovered, keep the mismatch explicit.
+
+## Paper source
+
 Source: the supplied `MICCAI2026_DentalPSAM (1).zip`,
 `LatexSource-4344/sec/experiment.tex`. Its comparison and ablation tables agree
 with the earlier `MICCAI2026_DentalPSAM.zip`. The CVPR archive and the separate

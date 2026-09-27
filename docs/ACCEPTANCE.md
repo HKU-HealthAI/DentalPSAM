@@ -1,74 +1,88 @@
-# Acceptance criteria
+# Repository Release Gate
 
-This document separates repository usability from scientific reproduction.
-The current cleanup is a **Repository Release Gate**: clear Dataset, Testing,
-and two-stage Training instructions; working public commands; preserved
-scientific behavior; and no private artifacts in Git. Matching published
-metrics is a separate **Scientific Reproduction Gate**, not a cleanup condition.
+This stage covers public readability, software usability, and preservation of
+existing scientific behavior. It does **not** require reproducing paper metric
+values. The separate [Scientific Reproduction Gate](archive/PAPER_RESULTS.md)
+remains open and is not silently completed by a code cleanup or Git push.
 
-The structural candidate is not yet fully accepted: its final server regression
-rerun and clean-checkout checks remain pending. A Git push does not mark either
-gate passed. The scientific targets below are retained for later verification.
+## Reader-facing requirements
 
-## 1. Clear code structure
+- [x] Dataset status: being organized, not public; contact the authors for
+  access. No patient data are distributed.
+- [x] [Dataset specification](DATASET.md): actual folders, inputs, annotations,
+  matching filenames, preprocessing, and participant-disjoint splits.
+- [x] Public workflow uses 2D branch, 3D branch, fusion, and DentalPSAM.
+  Internal implementation names are explained once in
+  [Model and checkpoints](MODEL_AND_CHECKPOINTS.md).
+- [x] Testing is one command, `python test.py`, with documented prerequisites,
+  fixed-list evaluation, output paths, and missing-input failures.
+- [x] Training explicitly has Stage 1, `python train.py --stage 3d`, followed
+  by Stage 2, `python train.py --stage dentalpsam`, using the selected 3D
+  checkpoint or its prepared features.
+- [x] The README contains the full Dataset/Test/Train workflow in fewer than
+  150 lines. Advanced details and archived evidence are not prerequisites.
+- [x] Reusable training and validation logic lives in packages; validation
+  does not import a training CLI. The root interface is `train.py` / `test.py`.
+- [x] Historical checkpoint class names are retained internally; there is no
+  architecture, parameter-key, or evaluation-protocol renaming exercise.
 
-- Keep model, data loading, checkpoint loading, generation, training,
-  validation, prediction, and evaluation responsibilities separate.
-- Expose documented command-line entry points without private hard-coded paths.
-- Use descriptive snake_case functions/files, four-space indentation, and
-  explicit array contracts. Preserve checkpoint parameter names when renaming
-  would invalidate a historical checkpoint.
-- Keep patient data, checkpoints, predictions, and credentials outside Git.
-- Test the actual data flow on the server, including newly generated UV and
-  mesh NPZ files, rather than relying only on `--help`.
+These items record a source/document inspection, not a completed runtime gate.
 
-## Separate scientific gate: results matching the MICCAI paper
+## Verification required on the final candidate
 
-The current requested scope excludes stitching. The target is the paper's
-`w/o Stitch` row: plaque IoU **0.547**, Dice **0.700**, OA **0.830**.
-TSGCNet is an independent acceptance target too: plaque IoU **0.476**,
-Dice **0.626**, OA **0.807**, plus the non-plaque and mean-class entries in
-the MICCAI comparison table. Producing an NPZ or passing inference is not
-TSGCNet result reproduction. Bind the upstream checkpoint, score convention,
-normalization, generated SOTA meshes, and downstream DentalPSAM checkpoint
-as one reproducible chain; do not silently replace the upstream model.
-Match all three at the paper's published precision on the same documented
-cohort and original equal-triangle protocol. A change of evaluation unit,
-split, threshold, or selected cases cannot count as reproducing that row.
+- [ ] Run every public command's `--help` without private data.
+- [ ] Run `bash tests/run_checks.sh` before and after structural changes.
+- [ ] Run `pytest -q` and the synthetic demo from a clean checkout.
+- [ ] Confirm original inputs/outputs and both checkpoint variants remain
+  compatible on the designated validation server.
+- [ ] Scan the final Git index for patient artifacts, private paths, and
+  credentials, and verify that a clean checkout contains the documented scripts.
+- [ ] Have a reader unfamiliar with the code perform the five-minute check below.
 
-Required evidence: fixed split and participant identities, exact input
-features, checkpoint SHA-256, model variant, command, Git revision, complete
-prediction set, evaluator configuration, per-mesh metrics, and aggregate
-results. The reconstruction must run on research23 in `py39_rt2`. Keep raw
-data read-only and write derived outputs into a new directory.
+Current status: **pending final verification**, not accepted. Earlier server
+checks covered eight regression suites; an intermediate structural candidate
+also passed 53 pytest checks. These do not certify the final source revision.
+The [CPU workflow for 1d75106](https://github.com/HKU-HealthAI/DentalPSAM/actions/runs/36313424733)
+passed editable installation, compilation, pytest, and the synthetic demo on a
+fresh GitHub runner. This does not replace private-checkpoint server checks.
+The SSH jump route was unavailable during the latest final-candidate attempt.
+No training or paper-metric optimization was launched to work around it.
 
-Do not tune to the test set or fill gaps by mixing incompatible caches. Do
-not attach CIs from another run to the paper values. If the target cannot be
-recovered, document the mismatch and missing provenance; mark this criterion
-**not passed**, rather than changing the acceptance target.
+## Commands
 
-## 3. Detailed, usable README
+Run in the documented environment, from the repository root:
 
-A new reader must be able to identify the intended model variant and run the
-workflow from the README: dataset access, environment, weights, testing,
-Stage 1 (3D branch), and Stage 2 (DentalPSAM). Keep optional intermediate
-commands and file schemas in the detailed documentation. Explain prerequisites,
-where files are written, known limitations, and expected outputs. Distinguish
-paper targets, measured results, diagnostics, and optional area analysis.
+```bash
+python -m pip install -e ".[dev]"
+python train.py --help
+python train.py --stage 3d --help
+python train.py --stage dentalpsam --help
+python test.py --help
+bash tests/run_checks.sh
+pytest -q
+python examples/synthetic_sample/run.py --output outputs/release_smoke
+python tools/check_git_payload.py
+```
 
-## 4. Useful comments and documentation
+The smoke output must be new. Preserve logs and the tested Git revision;
+do not substitute an earlier successful candidate for the final rerun.
+The numerical contract includes architecture/checkpoint keys, mesh ordering,
+UV behavior, padding, label and score direction, participant splits, fixed
+0.5/0.5 fusion, strict `> 0.5`, and equal-triangle evaluation. Any deviation is
+a separate scientific change, not an acceptable side effect of cleanup.
 
-Document shapes, ordering, label direction, units, padding, normalization,
-fusion variants, and compatibility decisions. Explain why a non-obvious
-operation is retained. Remove stale debug code and misleading shape comments.
-Add regression tests for non-obvious indexing, padding, thresholding, and
-projection behavior. Documentation cannot substitute for a missing test.
+## Five-minute manual check
 
-## Current acceptance boundary
+A researcher who has read the paper but not the code should answer, from the
+README and its direct links:
 
-The [server verification record](SERVER_VALIDATION.md) establishes bounded
-inference compatibility, synthetic test coverage, and a fresh single-mesh
-generation/prediction/evaluation run. Complete-cohort measurements are also
-available, but do not match the paper targets. Overall paper-reproduction
-acceptance is therefore **not passed**. That numerical mismatch does not block
-the independent repository-readability gate.
+1. Where do I obtain the dataset, and where do its files go?
+2. What data and weights do I need to test DentalPSAM, and which command runs it?
+3. How do I train the 3D branch?
+4. How does its checkpoint feed into DentalPSAM training?
+5. Which commands correspond to the paper's method?
+
+Mark this gate passed only when these answers are clear and the final software
+checks above pass. A missing project license is intentionally deferred by the
+authors in this cleanup; third-party notices remain intact. Repository
+acceptance is not a dataset, checkpoint, or license release announcement.

@@ -1,5 +1,9 @@
 # Source provenance
 
+Archived source-inspection record. Filenames below describe the inspected
+sources and pre-refactor entry points, not the current public command interface.
+See the repository README for testing and two-stage training.
+
 The public tree was prepared from read-only snapshots on `research23` on
 2026-09-27. Private absolute paths were removed from executable entry points.
 The following SHA-256 values bind the upstream files that were inspected.

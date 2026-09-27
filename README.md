@@ -7,9 +7,9 @@ checkpoints, and training the model.
 ## Dataset
 
 The dataset used in this work is currently being organized and is not yet
-available for public release. Please **reach out to Dr. Deng or Haoning Jiang**
-regarding data access. No patient scans, annotations, or participant identifiers are
-distributed in this repository.
+available for public release. Please reach out to the authors regarding data
+access. No patient scans, annotations, or participant identifiers are distributed
+in this repository.
 
 See [Dataset specification](docs/DATASET.md) for the actual file layout,
 annotations, preprocessing assumptions, and participant-level split rules.
@@ -28,7 +28,7 @@ python -m pip install -e .
 Server compatibility checks use Python 3.9.18, PyTorch 2.0.1,
 CUDA 11.7, and an NVIDIA GPU. Dependency ranges are in `pyproject.toml`; the
 exact reference stack is in `environment.yml` and `requirements-validated.txt`.
-See [Quick start](docs/QUICKSTART.md) for environment setup.
+See [Environment setup](docs/REPRODUCIBILITY.md#installation) for details.
 
 ### Testing
 
@@ -42,9 +42,9 @@ This synthetic example verifies file layout, data loading, model-input
 construction, and reporting. It does not run the neural model or reproduce
 the paper's experimental results.
 
-**With study data and trained checkpoints.** Prepare the test split and weights as
-described in
-[Quick start](docs/QUICKSTART.md). Public task-checkpoint download links are not
+**With study data and trained checkpoints.** Prepare the
+[test split](docs/DATASET.md) and [weights](docs/MODEL_AND_CHECKPOINTS.md).
+Public task-checkpoint download links are not
 yet available; the repository does not contain pretrained weights.
 
 ```bash
@@ -120,11 +120,9 @@ pytest -q
 bash tests/run_checks.sh
 ```
 
-Code compatibility is checked separately from paper-result reproduction.
-The MICCAI table values have not yet been reproduced with the current traced
-artifacts. See [Reproducibility](docs/REPRODUCIBILITY.md),
-[server evidence](docs/SERVER_VALIDATION.md), and
-[paper reference values](docs/PAPER_RESULTS.md).
+See [Repository acceptance](docs/ACCEPTANCE.md) for the current software gate.
+Paper-result reproduction is tracked separately and remains unverified; a
+readability cleanup does not establish matching paper metrics.
 
 Formal citation metadata and project licensing are awaiting author confirmation.
 This is not yet a formal dataset or model-weight release. Existing third-party

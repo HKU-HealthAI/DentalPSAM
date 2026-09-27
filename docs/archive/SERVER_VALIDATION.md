@@ -1,5 +1,8 @@
 # Server verification, 2026-09-27
 
+Archived, revision-bound evidence. These checks do not certify later commits;
+the current repository gate is tracked in [Acceptance](../ACCEPTANCE.md).
+
 ## Current follow-up: input alignment and complete-cohort checks
 
 Code revision: `40c8604`. Eight synthetic regression suites and fourteen CLI
@@ -8,9 +11,9 @@ verification server. Both DentalPSAM variants and the 3D feature model still
 match the native implementations on the compatibility sample: input tensors
 are identical and maximum absolute output differences are zero.
 
-- [Gated compatibility](verification/compatibility_20260927_gated.json)
-- [Concatenation compatibility](verification/compatibility_20260927_concat.json)
-- [Aggregate checks and complete-cohort results](verification/verification_20260927.json)
+- [Gated compatibility](../verification/compatibility_20260927_gated.json)
+- [Concatenation compatibility](../verification/compatibility_20260927_concat.json)
+- [Aggregate checks and complete-cohort results](../verification/verification_20260927.json)
 
 The aggregate record includes source hashes, artifact hashes, and all metric
 intervals without patient identifiers or private storage paths. A fresh
@@ -81,9 +84,9 @@ them. No training or checkpoint selection was performed.
 
 Aggregate evidence, without patient data or identifiers:
 
-- [Historical gated evidence](verification/compatibility_gated.json), SHA-256
+- [Historical gated evidence](../verification/compatibility_gated.json), SHA-256
   `2d43063fdafe38891e2c461e3c0f6f6ef0dd9ff10ab4a75ed5b4066e303c8386`.
-- [Concatenation evidence](verification/compatibility_concat.json), SHA-256
+- [Concatenation evidence](../verification/compatibility_concat.json), SHA-256
   `a40e0c7e7e544692a62a602500bba720b6a55ed78b49ce1caed6ccba7e9a599c`.
 
 Both reports contain checkpoint hashes and the hashes of 33 source modules;

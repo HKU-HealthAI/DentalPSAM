@@ -1,11 +1,34 @@
 # Reproducibility notes
 
+## Installation
+
+Clone the repository and run from its root. The package accepts Python
+3.9–3.11; dependency ranges are defined in `pyproject.toml`. These are
+installation bounds, not a claim that every combination was tested.
+
+For the reference Conda stack:
+
+```bash
+conda env create --file environment.yml
+conda activate dentalpsam
+```
+
+For an existing compatible environment:
+
+```bash
+python -m pip install -e .
+```
+
+GPU execution needs an appropriate NVIDIA driver. The synthetic example and
+unit tests need no patient data, external checkpoints, or GPU. Fresh Conda
+resolution is separate from installing into the checked server environment.
+
 ## Model configuration
 
 DentalPSAM uses the vendored SAM ViT-B image encoder with 1024 x 1024 model
 input, a 64 x 64 embedding grid, embedding dimension 256, and eight attention
 heads. The mesh path receives padded `[batch, 6000, 10]` patches. Channel 9 of
-`SOTA_mesh` is an auxiliary TSGCNet score, contractually `P(plaque)`.
+`SOTA_mesh` is an auxiliary 3D feature score, contractually `P(plaque)`.
 The historical decoder multiplies it into learned geometry; the newer decoder
 concatenates it with geometry before a fusion MLP. Inference selects the
 architecture from checkpoint keys and enforces strict loading. Do not invert
@@ -20,7 +43,7 @@ The historical patch filter keeps 256 x 256 label patches containing at least
 50 positive pixels; set `--min-positive-pixels 0` only for a separately named
 all-patch experiment.
 
-TSGCNet uses 16,000 faces, `k=12`, batch size 1, Adam at `1e-4`, weight decay
+The 3D branch uses 16,000 faces, `k=12`, batch size 1, Adam at `1e-4`, weight decay
 `1e-5`, at most 50 epochs, and validation patient-macro area-weighted plaque
 IoU for checkpoint selection. Its training command cannot receive a test or
 external directory.
@@ -73,7 +96,7 @@ testing or training DentalPSAM with existing prepared inputs does not require it
 
 The clean training entry points are explicit, validation-only protocols;
 they are not verbatim copies of the historical trainers. In particular, the
-clean TSGCNet trainer uses NLL loss and validation-area selection, whereas the
+clean 3D trainer uses NLL loss and validation-area selection, whereas the
 inspected historical trainer used DiceFocal and external label-1 IoU selection.
 These changes must not be described as exact reproduction of historical
 training. Existing frozen checkpoints should first be tested with matched
@@ -95,3 +118,36 @@ test IoU for selection. These are provenance checks, not model-training steps.
 For a fresh-data integration check, use `tools/smoke_pipeline.py --help`.
 It executes all five stages on one mesh and records input hashes before and
 after execution. Such a check cannot establish full-cohort paper performance.
+
+## Known limitations
+
+- Dataset and task weights are not yet public. The synthetic example checks
+  software interfaces, not model quality or anatomical UV separation.
+- The traced full-cohort results do not reproduce the MICCAI targets. Training
+  protocols differ from the inspected historical selection procedure; naming
+  the stages does not make them an exact historical replay.
+- The generating checkpoint for historical stored 3D scores is not fully
+  resolved. Do not substitute or invert scores based on test performance.
+- Gingival removal and downsampling precede this pipeline. Uniform remeshing
+  is not performed by this code.
+- UV separation assumes oriented, preprocessed dental meshes. The renderer
+  retains unused fixed-range arguments and a label-map-back diagnostic shortcut
+  for at most ten positive predictions; that diagnostic is not the reported
+  model evaluator.
+- The 3D implementation preserves native reshape, padding-sensitive
+  normalization, neighborhood ordering, and discarded dropout return values.
+  Altering these is a scientific change, not repository cleanup.
+- Project licensing and final citation metadata await author confirmation.
+  Third-party licenses and notices are retained independently.
+
+## Archived evidence and separate acceptance
+
+The [Repository Release Gate](ACCEPTANCE.md) concerns public usability and
+unchanged software behavior. The [Scientific Reproduction Gate](archive/PAPER_RESULTS.md)
+is separate and remains open. Neither a Git push nor a passing import check
+completes both gates.
+
+[Source provenance](archive/SOURCE_PROVENANCE.md),
+[revision-bound server checks](archive/SERVER_VALIDATION.md), and the aggregate
+JSON reports in `verification/` are retained for audit. They document specific
+earlier revisions and are not required reading for normal testing or training.

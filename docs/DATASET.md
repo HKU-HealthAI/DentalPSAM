@@ -4,7 +4,7 @@ One sample is one dental arch mesh, represented by three rendered views and
 aligned triangle features. A participant can contribute two arches. Real scans,
 annotations, identities, and split manifests are private and are not included.
 The dataset is being organized and is not yet available for public release.
-Please reach out to the authors regarding access.
+Please reach out to the authors regarding data access.
 
 The pipeline expects preprocessed, gingiva-removed meshes, not unprocessed
 scanner exports. Gingival removal and mesh simplification are upstream steps;
@@ -41,7 +41,7 @@ evaluation data must not be used to select checkpoints or training settings.
 ## Prepare inputs
 
 With prepared `manual_2D/` inputs, use `python test.py` directly as shown in
-[Quick start](QUICKSTART.md). For preprocessed PLY pairs without prepared
+the [README](../README.md#testing). For preprocessed PLY pairs without prepared
 inputs, add `--3d-checkpoint` to generate views and mesh features automatically.
 No retraining is required. The original inputs are not modified; generated
 files go into a new output directory outside the source data tree.
@@ -49,7 +49,20 @@ files go into a new output directory outside the source data tree.
 Training also prepares inputs automatically when
 `python train.py --stage dentalpsam` receives `--3d-checkpoint`. See
 [Training](TRAINING.md). For separately running or inspecting preprocessing,
-see [Advanced preprocessing](PREPROCESSING.md).
+see [Advanced preprocessing](#advanced-preprocessing) below.
+
+```bash
+python test.py --data data/test --checkpoint checkpoints/dentalpsam.pth \
+  --3d-checkpoint checkpoints/3d_branch.pth --output outputs/test_from_ply
+```
+
+`--data` is a single split, not the full dataset root. `mesh_ids.txt` declares
+the fixed evaluation cohort; use `--mesh-list` for another location. Supplying
+`--3d-checkpoint` regenerates inputs even if prepared inputs already exist.
+Use the feature checkpoint associated with the DentalPSAM weights, not an
+arbitrary substitute. The output must be new and outside the source data tree.
+Detailed progress is written to `run.log`; missing or misaligned inputs are
+errors rather than silently excluded cases.
 
 ## Array conventions
 
@@ -203,3 +216,57 @@ bootstrap confidence intervals. Area metrics weight each face by
 
 Paired model comparisons use patient-level differences, paired-bootstrap
 intervals, two-sided sign-flip tests, and Holm adjustment.
+
+## Advanced preprocessing
+
+The normal commands prepare inputs automatically with `--3d-checkpoint`.
+Use these optional steps to inspect individual stages or prepare reusable
+inputs without running the neural model afterward. Preparation uses frozen
+weights and does not train either branch.
+
+Set absolute paths to a preprocessed PLY split, its fixed mesh list, and the
+compatible 3D checkpoint. Choose a new directory outside the source data tree:
+
+```bash
+DATA_DIR=/absolute/path/to/test
+MESH_LIST=/absolute/path/to/splits/test.txt
+FEATURE_CHECKPOINT=/absolute/path/to/checkpoints/3d_branch.pth
+PREPARED_DIR="$PWD/outputs/prepared_test"
+mkdir -p "$PREPARED_DIR"
+
+python scripts/data/prepare_views.py \
+  --origin-dir "$DATA_DIR/origin" --label-dir "$DATA_DIR/label" \
+  --mesh-list "$MESH_LIST" --output-dir "$PREPARED_DIR/views"
+
+python scripts/branch3d/export_features.py \
+  --checkpoint "$FEATURE_CHECKPOINT" \
+  --data-dir "$DATA_DIR" --info-dir "$PREPARED_DIR/views/info" \
+  --mesh-list "$MESH_LIST" --out-dir "$PREPARED_DIR/features" \
+  --device cuda:0 --k 12
+```
+
+Assemble the prepared split using links; do not move or modify the PLY inputs:
+
+```bash
+mkdir -p "$PREPARED_DIR/dataset/manual_2D"
+ln -s "$DATA_DIR/origin" "$PREPARED_DIR/dataset/origin"
+ln -s "$DATA_DIR/label" "$PREPARED_DIR/dataset/label"
+ln -s "$PREPARED_DIR/views/origin" "$PREPARED_DIR/dataset/manual_2D/origin"
+ln -s "$PREPARED_DIR/views/label" "$PREPARED_DIR/dataset/manual_2D/label"
+ln -s "$PREPARED_DIR/views/info" "$PREPARED_DIR/dataset/manual_2D/info"
+ln -s "$PREPARED_DIR/features/SOTA_mesh" "$PREPARED_DIR/dataset/manual_2D/SOTA_mesh"
+ln -s "$PREPARED_DIR/features/label_mesh" "$PREPARED_DIR/dataset/manual_2D/label_mesh"
+
+python tools/preflight_split.py \
+  --data-dir "$PREPARED_DIR/dataset/manual_2D" \
+  --participant-id-prefix-length 4 --out "$PREPARED_DIR/input_check.json"
+
+python test.py --data "$PREPARED_DIR/dataset" \
+  --mesh-list "$MESH_LIST" \
+  --checkpoint checkpoints/dentalpsam.pth \
+  --sam-checkpoint checkpoints/sam_vit_b_01ec64.pth \
+  --output outputs/test_prepared
+```
+
+Prepare training and validation separately with the same frozen checkpoint.
+Never overwrite inputs used by an existing run or mix participants across splits.

@@ -17,9 +17,11 @@ traceable. Source organization does not by itself establish paper reproduction.
    Record the exact source revision or source hashes with test evidence.
 4. Review `git diff --check` and the staged diff. Stage specific files or
    explicitly reviewed directories rather than the entire workspace.
-5. Push coherent, tested milestones. Verify that the remote branch points to
-   the intended commit. A public release tag requires the remaining license,
-   checkpoint, data-access, and reproduction checks in the README.
+5. Push coherent milestones to `main` and verify the remote commit. State which
+   checks passed for that exact revision and which remain pending; pushing a
+   candidate does not accept it. Follow [Repository acceptance](docs/ACCEPTANCE.md)
+   independently of paper-result reproduction. A formal release tag additionally
+   requires author decisions on licensing and data/checkpoint availability.
 
 Use repository-local Git identity and configuration. Credentials belong in
 the process environment or credential manager, never in remote URLs, files,
