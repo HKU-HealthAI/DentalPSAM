@@ -26,16 +26,25 @@ def main():
     checked = 0
     for name in filter(None, paths):
         path = Path(name)
+        example_asset = bool(re.fullmatch(
+            r"examples/(?:cases/(?:meshes|labels)/000[123]01\.ply|"
+            r"results/processed/metadata/000[123]01\.npz|"
+            r"results/predictions/000[123]01_[012]\.png|"
+            r"results/predictions/3Dpred/000[123]01_[012]\.npz|"
+            r"results/meshes/000[123]01\.ply|"
+            r"previews/000[123]01\.png)", name
+        ))
         reason = None
-        if path.suffix.lower() in forbidden_suffixes or (
+        if not example_asset and (path.suffix.lower() in forbidden_suffixes or (
             set(path.parts) & forbidden_dirs
-        ):
+        )):
             reason = "private/generated artifact"
         if path.name == ".env" or path.name.startswith(".env.") and path.name != ".env.example":
             reason = "environment credentials"
         blob = subprocess.check_output(["git", "show", ":" + name], cwd=root)
-        if len(blob) > 1024 * 1024:
-            reason = "file exceeds 1 MiB source-only budget"
+        size_limit = (4 if example_asset else 1) * 1024 * 1024
+        if len(blob) > size_limit:
+            reason = "file exceeds repository size budget"
         if secret.search(blob):
             reason = "credential pattern"
         if reason:
@@ -43,7 +52,7 @@ def main():
         checked += 1
     if failures:
         raise SystemExit("Git payload check failed:\n" + "\n".join(failures))
-    print(f"PASS: {checked} indexed source files; no forbidden artifacts or detected credential patterns")
+    print(f"PASS: {checked} indexed files; no forbidden artifacts or detected credential patterns")
 
 
 if __name__ == "__main__":

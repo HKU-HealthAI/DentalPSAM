@@ -35,6 +35,7 @@ def test_single_public_package_and_no_unused_config():
     [
         ["train.py", "--help"],
         ["test.py", "--help"],
+        ["visualize.py", "--help"],
         ["train.py", "--stage", "3d", "--help"],
         ["train.py", "--stage", "dentalpsam", "--help"],
     ],

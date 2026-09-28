@@ -40,9 +40,21 @@ def load_mesh_predictions(data_dir: Path, prediction_dir: Path, mesh_id: str):
     On grayscale black/white labels this means any black vertex makes the face
     plaque. Each UV face must occur exactly once; mismatches raise, never truncate.
     """
-    vertices, colours, faces = read_ply_mesh(data_dir / "label" / f"{mesh_id}.ply")
+    return load_mesh_prediction_files(
+        data_dir / "label" / f"{mesh_id}.ply",
+        data_dir / "manual_2D" / "info" / f"{mesh_id}.npz",
+        prediction_dir,
+        mesh_id,
+    )
+
+
+def load_mesh_prediction_files(
+    label_path: Path, metadata_path: Path, prediction_dir: Path, mesh_id: str
+):
+    """Read aligned targets and probabilities from explicit public file paths."""
+    vertices, colours, faces = read_ply_mesh(label_path)
     targets, images, meshes, triangles = [], [], [], []
-    with np.load(data_dir / "manual_2D" / "info" / f"{mesh_id}.npz") as info:
+    with np.load(metadata_path) as info:
         for view_index, view in enumerate(VIEWS):
             tri = np.asarray(info[f"tri_{view}"], dtype=np.int64)
             # Preserve float32 mean rounding at integer pixel boundaries.

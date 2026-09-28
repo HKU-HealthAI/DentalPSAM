@@ -50,3 +50,13 @@ venv/
 build/
 dist/
 .DS_Store
+
+# Published example cases and their matching prediction resources.
+!examples/results/
+!examples/cases/meshes/*.ply
+!examples/cases/labels/*.ply
+!examples/results/processed/metadata/*.npz
+!examples/results/predictions/*.png
+!examples/results/predictions/3Dpred/*.npz
+!examples/results/meshes/*.ply
+!examples/previews/*.png

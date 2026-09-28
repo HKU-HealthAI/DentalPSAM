@@ -1,7 +1,8 @@
 # Dataset
 
-Coming soon. No patient scans, annotations,
-identifiers, or cohort manifests are included in this repository.
+The full dataset is coming soon. Three example scans with matching annotations
+are included in [examples/cases](../examples/cases); see the
+[example guide](../examples/README.md) for prediction and visualization.
 
 ## Input layout
 

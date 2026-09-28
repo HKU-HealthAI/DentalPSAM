@@ -9,8 +9,9 @@ inputs for DentalPSAM. SAM initialization remains pretrained rather than random.
 Prepare participant-disjoint `data/train` and `data/val` splits using the
 [dataset layout](DATASET.md). Each contains preprocessed meshes and matching
 annotations. Place the SAM ViT-B initialization at `checkpoints/sam.pth`;
-`--sam-checkpoint` can override this location. Weights are not included or
-automatically downloaded. Use new output paths outside the input data tree.
+`--sam-checkpoint` can override this location. Download `sam.pth` from the
+[pretrained checkpoints](https://github.com/HKU-HealthAI/DentalPSAM/releases/tag/v0.1.0).
+Use new output paths outside the input data tree.
 
 ## 1. Train the 3D branch
 

@@ -17,15 +17,16 @@ Architecture shown in the MICCAI paper. The implementation guide is
 | --- | --- |
 | Code | Available |
 | Dataset | Coming soon |
-| Task checkpoints | Local weights directory: `checkpoints/` (see [Test](#test)) |
+| Pretrained checkpoints | [Download](https://github.com/HKU-HealthAI/DentalPSAM/releases/tag/v0.1.0) |
+| Example cases | [Scans, annotations, and predictions](examples/README.md) |
+| Visualization | [Code and usage](#visualization) |
 
-Third-party redistribution permission is unresolved; this is not yet a licensed
-open-source release. See [Third-party notices](THIRD_PARTY_NOTICES.md).
+See [Third-party notices](THIRD_PARTY_NOTICES.md) for component licenses and attribution.
 
 ## Dataset
 
-Coming soon.
-This repository does not distribute patient scans or annotations.
+The full dataset is coming soon. Example scans and their annotations are
+included in [examples/cases](examples/cases).
 
 See [Dataset](docs/DATASET.md) for the input layout and annotations.
 
@@ -44,16 +45,24 @@ python -m pip install -e .
 
 Other Python/PyTorch/CUDA combinations have not been validated. Dependency
 ranges in `pyproject.toml` are installation constraints, not a tested matrix.
-For a software installation check without study data or weights:
-
-```bash
-python -m pip install -e ".[dev]"
-pytest -q
-```
-
-These are software-contract tests, not a model-performance benchmark.
+Development setup and checks are described in [Contributing](CONTRIBUTING.md).
 
 ## Test
+
+Download the pretrained weights into `checkpoints/`:
+
+```bash
+mkdir -p checkpoints
+curl -L --fail -o checkpoints/dentalpsam.pth https://github.com/HKU-HealthAI/DentalPSAM/releases/download/v0.1.0/dentalpsam.pth
+curl -L --fail -o checkpoints/branch3d.pth https://github.com/HKU-HealthAI/DentalPSAM/releases/download/v0.1.0/branch3d.pth
+curl -L --fail -o checkpoints/sam.pth https://github.com/HKU-HealthAI/DentalPSAM/releases/download/v0.1.0/sam.pth
+```
+
+Run DentalPSAM on the included cases:
+
+```bash
+python test.py --data examples/cases --weights checkpoints --output results
+```
 
 Arrange the authorized test data and its matching weights as follows:
 
@@ -81,6 +90,23 @@ in the terminal; detailed output is in `results/run.log`.
 Use a new output directory for each run. Input data are never overwritten.
 Testing does not require retraining. Use `python test.py --help` for options.
 Keep all files supplied with the weights together in `checkpoints/`.
+
+## Visualization
+
+Render original scans, ground truth, and DentalPSAM predictions side by side:
+
+```bash
+python -m pip install -e ".[visualization]"
+python visualize.py --data examples/cases --results examples/results --output visualizations
+```
+
+Each case produces a comparison PNG and coloured PLY meshes that open in
+MeshLab, Blender, or Open3D. Blue marks plaque. To visualize a new prediction
+run, replace `--results examples/results` with `--results results`.
+
+See [example cases](examples/README.md) for previews and case-level scores.
+
+![DentalPSAM example: original scan, ground truth, and prediction](examples/previews/000101.png)
 
 ## Train
 
@@ -129,7 +155,7 @@ Qualitative comparison from Figure 3 of the MICCAI paper. Blue marks plaque.
 
 The [package guide](dentalpsam/README.md) maps model, data, training, and evaluation
 modules, including the 3D branch in `dentalpsam/branch3d/`.
-`train.py` and `test.py` are the public commands; both support `--help`.
+`train.py`, `test.py`, and `visualize.py` support `--help`.
 Contributor checks live in `tests/`; they are not additional model entry points.
 
 ## Citation

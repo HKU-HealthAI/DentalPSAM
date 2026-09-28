@@ -21,9 +21,11 @@ averaging. Keep participants separate across train, validation, and test.
 
 ## Repository contents
 
-Commit source code, tests, documentation, and paper figures. Keep patient data,
-checkpoints, predictions, run logs, generated JSON reports, and private experiment
-records outside Git. Tests should create their temporary inputs at runtime.
+Commit source code, tests, documentation, paper figures, and the published
+example cases under `examples/`. Keep full datasets, additional predictions,
+run logs, generated JSON reports, and private experiment records outside Git.
+Publish large pretrained checkpoints as GitHub Release assets.
+Tests should create their temporary inputs at runtime.
 Never commit credentials or private storage paths.
 
 Use concise commit messages that describe the change. Review staged files and

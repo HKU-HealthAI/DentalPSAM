@@ -1,9 +1,9 @@
 # DentalPSAM implementation
 
 This package contains the model and reusable code for data preparation,
-training, prediction, and evaluation. Start with the repository's
+training, prediction, evaluation, and visualization. Start with the repository's
 [Testing and Training instructions](../README.md); the public commands are
-`test.py` and `train.py`. Modules here are not additional command-line entry points.
+`test.py`, `train.py`, and `visualize.py`.
 
 ## Bidirectional Memory Transformer (BMT)
 
@@ -37,6 +37,7 @@ after predictions are restored to the original faces—not inside the BMT.
 | Model construction and strict checkpoint loading | [checkpoints.py](checkpoints.py) |
 | Per-view prediction and face-order restoration | [inference.py](inference.py), [prediction_io.py](prediction_io.py) |
 | Mesh fusion, metrics, confidence intervals, and reports | [evaluation.py](evaluation.py), [reporting.py](reporting.py) |
+| Scan/label/prediction panels and coloured PLY export | [visualization.py](visualization.py) |
 
 ## How the pieces fit
 

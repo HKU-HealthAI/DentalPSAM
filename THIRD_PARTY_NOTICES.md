@@ -31,5 +31,6 @@ compatibility review. Adding a DentalPSAM license would not relicense the
 third-party code. No permission or legal clearance is asserted here.
 
 The project license is also undecided. SAM's retained Apache-2.0 notice applies
-to its covered components only. Patient data and model checkpoints are not
-distributed, and no license for them is implied.
+to its covered components only. Example scans and annotations are provided
+under `examples/`; pretrained weights are available from the repository's
+Releases page. No additional license for those resources is implied.

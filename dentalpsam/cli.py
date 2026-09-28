@@ -1,4 +1,4 @@
-"""The two public commands; imports of model libraries are deferred until execution."""
+"""Training and prediction commands; model imports are deferred until execution."""
 
 import argparse
 from pathlib import Path
