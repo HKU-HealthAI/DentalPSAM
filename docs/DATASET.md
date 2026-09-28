@@ -1,7 +1,6 @@
 # Dataset
 
-The dataset is being organized and is not publicly released yet. Please reach
-out to the authors regarding data access. No patient scans, annotations,
+Coming soon. No patient scans, annotations,
 identifiers, or cohort manifests are included in this repository.
 
 ## Input layout

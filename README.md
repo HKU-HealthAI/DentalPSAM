@@ -16,16 +16,15 @@ Architecture shown in the MICCAI paper. The implementation guide is
 | Resource | Status |
 | --- | --- |
 | Code | Public research implementation; licensing review pending |
-| Dataset | Being organized; not publicly released |
-| Task checkpoints | Not publicly released; contact the authors |
+| Dataset | Coming soon |
+| Task checkpoints | Local weights directory: `checkpoints/` (see [Test](#test)) |
 
 Third-party redistribution permission is unresolved; this is not yet a licensed
 open-source release. See [Third-party notices](THIRD_PARTY_NOTICES.md).
 
 ## Dataset
 
-The dataset is being organized and is not publicly released yet.
-Please reach out to the authors regarding data access.
+Coming soon.
 This repository does not distribute patient scans or annotations.
 
 See [Dataset](docs/DATASET.md) for the input layout and annotations.
@@ -69,7 +68,7 @@ checkpoints/
   sam.pth
 ```
 
-Task-trained checkpoints are not publicly released yet. Once available to you:
+Place the task-trained weights in `checkpoints/` as shown above, then run:
 
 ```bash
 python test.py --data data/test --weights checkpoints --output results
