@@ -21,7 +21,6 @@ from dentalpsam.evaluation import (
 )
 
 
-from dentalpsam.mesh_io import hash_named_files, sha256_file
 
 
 def evaluate_predictions(args) -> None:
@@ -39,19 +38,11 @@ def evaluate_predictions(args) -> None:
     if args.expected_count is not None and len(ids) != args.expected_count:
         raise ValueError("Mesh-list count differs from --expected-count")
     rows = {branch: [] for branch in ("2d", "3d", "fusion")}
-    files = [("mesh_list", args.mesh_list)]
     for mesh_id in ids:
         target, two_d, three_d = load_mesh_predictions(args.data_dir, args.prediction_dir, mesh_id)
         fused = args.fusion_weight_2d * two_d + (1 - args.fusion_weight_2d) * three_d
         for branch, scores in (("2d", two_d), ("3d", three_d), ("fusion", fused)):
             rows[branch].append({"mesh_id": mesh_id, **equal_face_metrics(target, scores, args.threshold)})
-        files.extend([
-            (f"label/{mesh_id}.ply", args.data_dir / "label" / f"{mesh_id}.ply"),
-            (f"info/{mesh_id}.npz", args.data_dir / "manual_2D/info" / f"{mesh_id}.npz"),
-        ])
-        for index in range(3):
-            files.append((f"2d/{mesh_id}_{index}.png", args.prediction_dir / f"{mesh_id}_{index}.png"))
-            files.append((f"3d/{mesh_id}_{index}.npz", args.prediction_dir / "3Dpred" / f"{mesh_id}_{index}.npz"))
     summary = {branch: cluster_bootstrap(values, args.bootstrap_reps, args.seed)
                for branch, values in rows.items()}
     manifest = {
@@ -64,9 +55,6 @@ def evaluate_predictions(args) -> None:
         "aggregation": "arithmetic mean of per-mesh metrics",
         "ci": "95% percentile bootstrap of participants carrying all their meshes",
         "bootstrap_reps": args.bootstrap_reps, "seed": args.seed,
-        "input_files": hash_named_files(files),
-        "evaluator_sha256": sha256_file(Path(__file__).resolve()),
-        "metric_module_sha256": sha256_file(Path(__file__).parent / "evaluation.py"),
     }
     output.mkdir(parents=True)
     with (output / "per_mesh_metrics.csv").open("w", newline="") as handle:

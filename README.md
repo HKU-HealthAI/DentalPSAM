@@ -67,7 +67,6 @@ checkpoints/
   dentalpsam.pth
   branch3d.pth
   sam.pth
-  manifest.json     # model information supplied with the weights
 ```
 
 Task-trained checkpoints are not publicly released yet. Once available to you:

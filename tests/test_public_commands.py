@@ -59,7 +59,6 @@ def test_weight_directory_resolves_named_files(monkeypatch):
     assert args.checkpoint == Path("weights/dentalpsam.pth")
     assert args.sam_checkpoint == Path("weights/sam.pth")
     assert args.branch_checkpoint == Path("weights/branch3d.pth")
-    assert args.bundle_manifest == Path("weights/manifest.json")
 
 
 def test_joint_training_minimal_command(monkeypatch):
@@ -119,13 +118,11 @@ def test_test_help_explains_files_and_outputs(capsys):
     help_text = capsys.readouterr().out
     for text in ("mesh_ids.txt", "summary.txt", "run.log", "Advanced overrides"):
         assert text in help_text
-    assert "--model-info" in help_text
     for text in ("bundle", "sha256", "sha-256"):
         assert text not in help_text.lower()
 
 
-@pytest.mark.parametrize("option", ["--model-info", "--bundle-manifest"])
-def test_explicit_weights_accept_model_information_and_previous_option(monkeypatch, option):
+def test_explicit_weights_need_no_additional_information_file(monkeypatch):
     from dentalpsam import workflows
 
     received = []
@@ -133,9 +130,8 @@ def test_explicit_weights_accept_model_information_and_previous_option(monkeypat
     run_test_command([
         "--data", "data/test", "--output", "results", "--checkpoint", "model.pth",
         "--branch-checkpoint", "branch.pth", "--sam-checkpoint", "sam.pth",
-        option, "manifest.json",
     ])
-    assert received[0].bundle_manifest == Path("manifest.json")
+    assert received[0].branch_checkpoint == Path("branch.pth")
 
 
 @pytest.mark.parametrize("stage,checkpoint", [("3d", "best.pth"), ("dentalpsam", "best_model.pth")])

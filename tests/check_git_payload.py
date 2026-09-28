@@ -16,7 +16,8 @@ def main():
     root = Path(__file__).resolve().parents[1]
     paths = subprocess.check_output(["git", "ls-files", "-z"], cwd=root).decode().split("\0")
     forbidden_suffixes = {".ply", ".npy", ".npz", ".pth", ".pt", ".h5", ".hdf5", ".pkl",
-                          ".zip", ".tar", ".gz", ".bundle", ".pem", ".key"}
+                          ".zip", ".tar", ".gz", ".bundle", ".pem", ".key",
+                          ".json", ".jsonl", ".sha256"}
     forbidden_dirs = {"data", "Raw", "derived", "outputs", "checkpoints", "results",
                       "local_evidence", ".venv", "venv"}
     secret = re.compile(rb"gh[pousr]_[A-Za-z0-9]{20,}|github_pat_[A-Za-z0-9_]{20,}|"

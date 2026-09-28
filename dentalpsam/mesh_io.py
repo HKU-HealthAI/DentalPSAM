@@ -1,7 +1,6 @@
-"""Mesh geometry and content hashes shared by inference and development checks."""
+"""Mesh geometry and face-order helpers shared by inference and evaluation."""
 
 from __future__ import annotations
-import hashlib
 from pathlib import Path
 import numpy as np
 
@@ -15,41 +14,6 @@ PLY_SCALARS = {
     "float": "<f4",
     "double": "<f8",
 }
-
-
-def sha256_file(path: Path) -> str:
-    """Return the content hash of one immutable evaluation input or output."""
-    digest = hashlib.sha256()
-    with path.open("rb") as handle:
-        for block in iter(lambda: handle.read(1024 * 1024), b""):
-            digest.update(block)
-    return digest.hexdigest()
-
-
-def sha256_lines(values: list[str]) -> str:
-    """Hash an ordered logical identifier list without exposing source paths."""
-    return hashlib.sha256(("\n".join(values) + "\n").encode("utf-8")).hexdigest()
-
-
-def hash_named_files(files: list[tuple[str, Path]]) -> dict[str, object]:
-    """Bind a logical input set to file content while keeping paths private.
-
-    The logical names are stable protocol identifiers (for example
-    ``origin/000101.ply``), not workstation paths. Hashing both the names and
-    the bytes prevents a file from being substituted or reordered unnoticed.
-    """
-    names = [name for name, _ in files]
-    if len(names) != len(set(names)):
-        raise ValueError("Input provenance contains duplicate logical file names")
-    digest = hashlib.sha256()
-    for name, path in sorted(files):
-        if not path.is_file():
-            raise FileNotFoundError(f"Missing evaluation input: {path}")
-        digest.update(name.encode("utf-8"))
-        digest.update(b"\0")
-        digest.update(sha256_file(path).encode("ascii"))
-        digest.update(b"\n")
-    return {"file_count": len(files), "sha256": digest.hexdigest()}
 
 
 def read_ply_mesh(path: Path) -> tuple[np.ndarray, np.ndarray, np.ndarray]:

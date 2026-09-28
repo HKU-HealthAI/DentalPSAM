@@ -45,7 +45,7 @@ def main() -> None:
         assert manifest["mesh_count"] == 2
         assert manifest["view_count"] == 6
         assert manifest["participant_count"] == 1
-        assert len(manifest["mesh_ids_sha256"]) == 64
+        assert manifest["file_counts"]["mesh_features_npz"] == 2
 
         (split / "origin" / "000102_2.png").unlink()
         expect_value_error(lambda: inspect_split(split), "Missing matching image")

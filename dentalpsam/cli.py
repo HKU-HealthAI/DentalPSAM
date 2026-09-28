@@ -77,7 +77,7 @@ def test_main(argv=None):
     weights.add_argument(
         "--weights",
         type=Path,
-        help="Directory containing dentalpsam.pth, branch3d.pth, sam.pth, and manifest.json",
+        help="Directory containing dentalpsam.pth, branch3d.pth, and sam.pth",
     )
     weights.add_argument(
         "--checkpoint", type=Path, help="Advanced: explicit DentalPSAM checkpoint file"
@@ -92,11 +92,6 @@ def test_main(argv=None):
     runtime.add_argument("--device", default="cuda:0", help="PyTorch device")
     runtime.add_argument("--num-workers", type=int, default=0, help="DataLoader workers")
     advanced = parser.add_argument_group("Advanced overrides")
-    advanced.add_argument("--model-info", dest="bundle_manifest", type=Path, metavar="PATH",
-                          help="Accompanying manifest.json when using explicit checkpoint paths")
-    # Keep the previous option readable by existing automation, not in public help.
-    advanced.add_argument("--bundle-manifest", dest="bundle_manifest", type=Path,
-                          default=argparse.SUPPRESS, help=argparse.SUPPRESS)
     advanced.add_argument(
         "--sam-checkpoint", type=Path, help="Advanced: override SAM initialization"
     )
@@ -119,9 +114,8 @@ def test_main(argv=None):
         args.checkpoint = args.weights / "dentalpsam.pth"
         args.sam_checkpoint = args.sam_checkpoint or args.weights / "sam.pth"
         args.branch_checkpoint = args.branch_checkpoint or args.weights / "branch3d.pth"
-        args.bundle_manifest = args.bundle_manifest or args.weights / "manifest.json"
-    elif args.bundle_manifest is None or args.branch_checkpoint is None or args.sam_checkpoint is None:
-        parser.error("Explicit --checkpoint requires --model-info, --branch-checkpoint and --sam-checkpoint; alternatively use --weights DIR")
+    elif args.branch_checkpoint is None or args.sam_checkpoint is None:
+        parser.error("Explicit --checkpoint requires --branch-checkpoint and --sam-checkpoint; alternatively use --weights DIR")
     from dentalpsam.workflows import test_model
 
     try:

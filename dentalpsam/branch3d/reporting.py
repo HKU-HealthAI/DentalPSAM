@@ -26,19 +26,17 @@ import numpy as np
 import torch
 
 
-from dentalpsam.checkpoints import extract_model_state
+from dentalpsam.branch3d.checkpoints import load_branch3d
 
 
 from dentalpsam.evaluation import cluster_bootstrap, equal_face_metrics, read_mesh_ids
 
 
-from dentalpsam.mesh_io import hash_named_files, read_ply_mesh, sha256_file
+from dentalpsam.mesh_io import read_ply_mesh
 
 
 from dentalpsam.branch3d.data import PlyDataset
 
-
-from dentalpsam.branch3d.model import TSGCNet
 
 
 def evaluate_checkpoint(args) -> None:
@@ -54,17 +52,13 @@ def evaluate_checkpoint(args) -> None:
         raise ValueError("Bootstrap repetitions must be positive")
     dataset = PlyDataset(str(source / "label"), enable_augmentation=False)
     dataset.file_list = [f"{name}.ply" for name in ids]
-    files = [("mesh_list", args.mesh_list), ("checkpoint", args.checkpoint)]
     for name in ids:
         for kind in ("origin", "label"):
             path = source / kind / f"{name}.ply"
             if not path.is_file():
                 raise FileNotFoundError(path)
-            files.append((f"{kind}/{name}.ply", path))
     device = torch.device(args.device)
-    model = TSGCNet(in_channels=9, output_channels=2, k=args.k).to(device).eval()
-    state = extract_model_state(torch.load(args.checkpoint, map_location="cpu"))
-    model.load_state_dict(state, strict=True)
+    model = load_branch3d(args.checkpoint, device, k=args.k)
     (output / "scores").mkdir(parents=True)
     rows = []
     with torch.inference_mode():
@@ -93,10 +87,10 @@ def evaluate_checkpoint(args) -> None:
         writer = csv.DictWriter(handle, fieldnames=list(rows[0]))
         writer.writeheader()
         writer.writerows(rows)
-    root = Path(__file__).resolve().parents[2]
     manifest = {
         "status": "completed",
         "method": "TSGCNet frozen checkpoint",
+        "normalization": model.normalization,
         "protocol": "original equal-triangle, strict >0.5, mesh-macro",
         "score": "exp(log_probability[..., 1]) = P(plaque)",
         "padding": "exclude rows beyond original PLY face count",
@@ -106,21 +100,7 @@ def evaluate_checkpoint(args) -> None:
         "bootstrap_reps": args.bootstrap_reps,
         "seed": args.seed,
         "k": args.k,
-        "checkpoint_sha256": sha256_file(args.checkpoint),
-        "input_files": hash_named_files(files),
-        "source_sha256": {
-            name: sha256_file(root / name)
-            for name in (
-                "dentalpsam/branch3d/reporting.py",
-                "dentalpsam/branch3d/model.py",
-                "dentalpsam/branch3d/data.py",
-                "dentalpsam/branch3d/utils.py",
-                "dentalpsam/evaluation.py",
-            )
-        },
-        "score_sha256": {
-            name: sha256_file(output / "scores" / f"{name}.npy") for name in ids
-        },
+        "checkpoint": str(args.checkpoint),
     }
     for file_name, value in (
         ("summary.json", summary),

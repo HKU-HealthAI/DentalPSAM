@@ -256,8 +256,11 @@ class TSGCNet(nn.Module):
     Registered layer names and initialization order match existing checkpoints.
     """
 
-    def __init__(self, k=16, in_channels=12, output_channels=8):
+    def __init__(self, k=16, in_channels=12, output_channels=8, normalization="per_mesh"):
         super(TSGCNet, self).__init__()
+        if normalization not in ("per_mesh", "running"):
+            raise ValueError("Unknown 3D branch normalization")
+        self.normalization = normalization
         self.k = k
         # Coordinate stream uses graph attention after neighborhood convolutions.
         self.bn1_c = nn.BatchNorm2d(64)
@@ -382,6 +385,23 @@ class TSGCNet(nn.Module):
 
         # Cache CPU connectivity; transfer indices only when needed for inference.
         self._adjacency_cache = {}
+        self.train(self.training)
+
+    def train(self, mode=True):
+        """Use the current mesh's BN moments in both training and inference.
+
+        One mesh is processed at a time. Running buffers remain registered for
+        strict checkpoint compatibility, but new models neither read nor update
+        them. Dropout and every non-BN module still follow the requested mode.
+        The running-statistics path is only for loading older checkpoints.
+        """
+        super().train(mode)
+        if self.normalization == "per_mesh":
+            for module in self.modules():
+                if isinstance(module, nn.modules.batchnorm._BatchNorm):
+                    module.track_running_stats = False
+                    module.train(True)
+        return self
 
     def _adjacency_index(self, index_face):
         """Build or reuse the fixed-width face-neighbour index for one mesh."""

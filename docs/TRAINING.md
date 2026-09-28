@@ -27,13 +27,18 @@ Use `--epochs 50 --patience 50` to run all 50 epochs without early stopping.
 
 The model returns `[1, faces, 2]` log probabilities. NLL is evaluated over the
 two classes for each original face; repeated padding rows do not contribute.
+New 3D models use current-mesh BN statistics in both training and inference.
+Their checkpoints retain this setting, which validation and feature export
+restore automatically. Coordinate preprocessing and parameter names are
+unchanged. Older unmarked checkpoints retain saved-statistics inference.
 See [implementation notes](#training-implementation-notes) for differences
 between these training settings and earlier training code.
 
 `configuration.json` records the declared split and options before training.
 `training_log.csv` records each epoch. `best.pth` and `last.pth` contain model,
 optimizer, scheduler, and random-generator state; inference loads only the model
-state. Automatic training resume is not currently exposed by the CLI.
+state and its normalization setting. Automatic training resume is not currently
+exposed by the CLI.
 
 ## 2. Train DentalPSAM
 
@@ -69,16 +74,11 @@ Arrange the training outputs and initialization files in `checkpoints/`:
 | `checkpoints/dentalpsam.pth` | `outputs/dentalpsam/best_model.pth` from stage 2 |
 | `checkpoints/branch3d.pth` | `outputs/3d/best.pth` used to prepare stage 2 inputs |
 | `checkpoints/sam.pth` | The same SAM ViT-B initialization used in stage 2 |
-| `checkpoints/manifest.json` | `outputs/dentalpsam/manifest.json`, generated after stage 2 |
 
 Copy these files into a new directory with the indicated filenames,
 then run `python test.py --data data/test --weights checkpoints --output results`.
 Keep the original training outputs. Do not substitute a different 3D checkpoint
 after DentalPSAM has been trained on its features.
-
-Stage 2 generates `manifest.json` automatically. It accompanies the model files
-so the test command can check their compatibility. For weights supplied by the
-authors, keep the accompanying file unchanged. No manual setup is required.
 
 ## Options and scope
 
@@ -118,6 +118,7 @@ The comparison below uses the retained task trainer and saved 3D trainer/log.
 | 3D selection | Saved trainer/log: highest class-1 IoU on its declared evaluation cohort, without physical-area weighting | Highest validation mesh-macro equal-triangle plaque IoU, strict `>0.5`; participant-disjoint validation |
 | 3D early stopping | No early-stop condition in the saved trainer | Patience 12 by default; `--patience 50` keeps a 50-epoch run |
 | 3D augmentation | Saved trainer explicitly disables it | Disabled |
+| 3D normalization | BN uses current moments in training and saved moments in inference | New models use current-mesh moments in both modes; old checkpoint inference is retained |
 | DentalPSAM optimizer | Archived source: Adam, `lr=1e-4`, weight decay 0, batch 4 | Retained defaults; optimizer/lr/batch also stated in the paper |
 | DentalPSAM duration/schedule | Archived source: 50 epochs; StepLR at 40, gamma 0.1 | Retained defaults; no early stopping |
 | DentalPSAM joint loss | Archived source: `2 * DiceCE_2D + BCE_mesh`; DiceCE uses sigmoid and squared predictions | Retained weighting; mesh BCE now excludes padding |
@@ -128,8 +129,9 @@ The comparison below uses the retained task trainer and saved 3D trainer/log.
 | Splits | Paper: 220/60/120; archived task trainer selects on a directory called External | Caller-declared participant-disjoint train/val; do not equate these automatically with the paper's split |
 
 Validation uses equal-triangle metrics, not physical-area weighting. Model
-architecture, checkpoint tensor keys, input normalization, and evaluation
-formulas are unchanged. Use the study's fixed split files when comparing with
+architecture, checkpoint tensor keys, coordinate preprocessing, and evaluation
+formulas are unchanged. BN inference for newly trained models is changed as
+documented above. Use the study's fixed split files when comparing with
 the paper; matching split sizes alone does not establish matching participants.
 
 </details>

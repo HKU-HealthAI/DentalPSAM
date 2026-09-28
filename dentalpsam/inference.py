@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import argparse
-import hashlib
 import json
 import platform
 import sys
@@ -35,15 +34,6 @@ VIEW_SLICES = {
     1: ("in", slice(6, 14), (1, 8, 256, 256), (256, 2048)),
     2: ("out", slice(14, 22), (1, 8, 256, 256), (256, 2048)),
 }
-
-
-def sha256_file(path: Path) -> str:
-    """Return the SHA-256 digest of one immutable input file."""
-    digest = hashlib.sha256()
-    with path.open("rb") as handle:
-        for block in iter(lambda: handle.read(1024 * 1024), b""):
-            digest.update(block)
-    return digest.hexdigest()
 
 
 def write_json(path: Path, payload: dict) -> None:
@@ -219,15 +209,11 @@ def predict_split(args) -> None:
         "schema_version": 1,
         "status": "started",
         "entry_point": Path(__file__).name,
-        "entry_point_sha256": sha256_file(Path(__file__).resolve()),
         "command": sys.argv,
         "checkpoint": str(checkpoint),
-        "checkpoint_sha256": sha256_file(checkpoint),
         "sam_checkpoint": str(sam_checkpoint),
-        "sam_checkpoint_sha256": sha256_file(sam_checkpoint),
         "data_dir": str(data_dir),
         "mesh_list": str(mesh_list),
-        "mesh_list_sha256": sha256_file(mesh_list),
         "mesh_count": len(mesh_ids),
         "target_threshold": args.target_threshold,
         "prediction_threshold": PREDICTION_THRESHOLD,

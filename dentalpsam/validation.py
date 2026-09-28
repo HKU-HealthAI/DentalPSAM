@@ -22,7 +22,7 @@ import torch
 from dentalpsam.checkpoints import load_dentalpsam
 
 
-from dentalpsam.training import make_loader, run_epoch, sha256_file
+from dentalpsam.training import make_loader, run_epoch
 
 
 def validate_checkpoint(args) -> None:
@@ -58,8 +58,8 @@ def validate_checkpoint(args) -> None:
         )
     payload = {
         "schema_version": 1,
-        "checkpoint_sha256": sha256_file(checkpoint),
-        "sam_checkpoint_sha256": sha256_file(sam_checkpoint),
+        "checkpoint": str(checkpoint),
+        "sam_checkpoint": str(sam_checkpoint),
         "target_threshold": args.target_threshold,
         "prediction_threshold": 0.5,
         "patch_selection": f"at least {args.min_positive_pixels} positive label pixels",

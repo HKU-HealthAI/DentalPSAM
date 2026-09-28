@@ -13,7 +13,6 @@ from __future__ import annotations
 import argparse
 
 
-import hashlib
 
 
 import json
@@ -43,14 +42,6 @@ VIEW_SHAPES = {"up": (512, 768), "in": (256, 2048), "out": (256, 2048)}
 VIEW_PATCH_COUNTS = {"up": 6, "in": 8, "out": 8}
 
 
-def sha256(path: Path) -> str:
-    digest = hashlib.sha256()
-    with path.open("rb") as handle:
-        for block in iter(lambda: handle.read(1024 * 1024), b""):
-            digest.update(block)
-    return digest.hexdigest()
-
-
 def read_mesh_ids(path: Path) -> list[str]:
     values = [
         Path(line.strip()).stem
@@ -60,17 +51,6 @@ def read_mesh_ids(path: Path) -> list[str]:
     if not values or len(values) != len(set(values)):
         raise ValueError("Mesh list must be non-empty and contain no duplicates")
     return values
-
-
-def checkpoint_state(path: Path, device: torch.device) -> dict[str, torch.Tensor]:
-    value = torch.load(path, map_location=device)
-    if isinstance(value, dict):
-        for key in ("model_state_dict", "state_dict", "model"):
-            if key in value and isinstance(value[key], dict):
-                return value[key]
-    if not isinstance(value, dict):
-        raise TypeError(f"Checkpoint does not contain a state dictionary: {path}")
-    return value
 
 
 def read_ply(path: Path) -> tuple[np.ndarray, np.ndarray, np.ndarray | None]:
@@ -236,7 +216,7 @@ def export_features(args) -> None:
         raise FileNotFoundError("Missing checkpoint or mesh list")
 
     from dentalpsam.branch3d.data import PlyDataset
-    from dentalpsam.branch3d.model import TSGCNet
+    from dentalpsam.branch3d.checkpoints import load_branch3d
 
     ids = read_mesh_ids(args.mesh_list)
     wanted = {f"{mesh_id}.ply" for mesh_id in ids}
@@ -247,17 +227,10 @@ def export_features(args) -> None:
     device = torch.device(args.device)
     if device.type == "cuda" and not torch.cuda.is_available():
         raise RuntimeError("CUDA was requested but is unavailable")
-    model = TSGCNet(in_channels=9, output_channels=2, k=args.k).to(device)
-    model.load_state_dict(checkpoint_state(args.checkpoint, device))
-    model.eval()
+    model = load_branch3d(args.checkpoint, device, k=args.k)
 
     for directory in ("SOTA_mesh", "label_mesh", "SOTA_pred", "scores"):
         (args.out_dir / directory).mkdir(parents=True, exist_ok=(directory != "SOTA_mesh"))
-    source_root = Path(__file__).resolve().parent
-    model_source = source_root / "model.py"
-    data_source = source_root / "data.py"
-    input_files = [args.checkpoint, args.mesh_list, model_source, data_source]
-    output_files: list[Path] = []
     cases: list[dict[str, object]] = []
 
     with torch.inference_mode():
@@ -267,7 +240,6 @@ def export_features(args) -> None:
             origin_path = args.data_dir / "origin" / name
             label_path = args.data_dir / "label" / name
             info_path = args.info_dir / f"{mesh_id}.npz"
-            input_files.extend((origin_path, label_path, info_path))
             vertices, faces, _origin_colours = read_ply(origin_path)
             _label_vertices, label_faces, label_colours = read_ply(label_path)
             if not np.array_equal(faces, label_faces) or label_colours is None:
@@ -296,7 +268,6 @@ def export_features(args) -> None:
                 raise ValueError(f"Invalid model probability: {mesh_id}")
             score_path = args.out_dir / "scores" / f"{mesh_id}.npy"
             np.save(score_path, face_scores.astype(np.float32))
-            output_files.append(score_path)
 
             mesh_index = {face_key(face): offset for offset, face in enumerate(faces)}
             if len(mesh_index) != raw_count:
@@ -325,7 +296,6 @@ def export_features(args) -> None:
                     image_path = args.out_dir / "SOTA_pred" / f"{mesh_id}_{VIEWS.index(view)}.png"
                     if not cv2.imwrite(str(image_path), rasterize(view, triangles, uv_pixels, view_scores)):
                         raise OSError(f"Failed to write {image_path}")
-                    output_files.append(image_path)
             if sorted(used_indices) != list(range(raw_count)):
                 raise ValueError(f"UV views are not an exact face partition: {mesh_id}")
 
@@ -335,7 +305,6 @@ def export_features(args) -> None:
             np.savez_compressed(label_mesh_path, **target_npz)
             verify_patch_file(sota_path, vertices, triangles_by_view, scores_by_view)
             verify_patch_file(label_mesh_path, vertices, triangles_by_view, targets_by_view)
-            output_files.extend((sota_path, label_mesh_path))
             cases.append({
                 "mesh_id": mesh_id,
                 "raw_face_count": raw_count,
@@ -349,10 +318,9 @@ def export_features(args) -> None:
         "schema_version": 2,
         "status": "completed",
         "method": "frozen 3D-branch feature and annotation export",
+        "normalization": model.normalization,
         "checkpoint": str(args.checkpoint),
-        "checkpoint_sha256": sha256(args.checkpoint),
         "mesh_list": str(args.mesh_list),
-        "mesh_list_sha256": sha256(args.mesh_list),
         "mesh_count": len(ids),
         "patient_count": len({mesh_id[:4] for mesh_id in ids}),
         "model_probability_location": "SOTA_mesh patch row column 9",
@@ -368,17 +336,6 @@ def export_features(args) -> None:
         "source_png_gt_leakage_path_used": False,
         "raw_data_modified": False,
         "uv_info_dir": str(args.info_dir),
-        "source": {
-            "exporter_sha256": sha256(Path(__file__).resolve()),
-            "model_sha256": sha256(model_source),
-            "dataloader_sha256": sha256(data_source),
-        },
-        "input_file_set_sha256": hashlib.sha256(
-            "\n".join(f"{path}:{sha256(path)}" for path in input_files).encode("utf-8")
-        ).hexdigest(),
-        "output_file_set_sha256": hashlib.sha256(
-            "\n".join(f"{path.relative_to(args.out_dir)}:{sha256(path)}" for path in output_files).encode("utf-8")
-        ).hexdigest(),
         "cases": cases,
     }
     (args.out_dir / "export_manifest.json").write_text(

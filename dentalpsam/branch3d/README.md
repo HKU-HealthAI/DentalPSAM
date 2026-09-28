@@ -73,6 +73,14 @@ in three streams. It gathers neighbouring faces through mesh connectivity,
 aggregates their features, and combines the streams to classify each face.
 The default neighbourhood width is 12; inference uses batch size 1.
 
+New models use **per-mesh normalization**: batch-normalization layers compute
+moments from the current mesh during both training and inference, without
+updating running statistics. Other layers retain their normal train/eval modes.
+The checkpoint records this choice; validation and feature export restore it
+automatically through [checkpoints.py](checkpoints.py). Older, unmarked weights
+retain their original saved-statistics inference. Do not strip checkpoint
+metadata or change normalization when exporting inputs for DentalPSAM.
+
 The output is **log probabilities** with shape `[1, 16000, 2]`.
 `output[0, :original_face_count, 1].exp()` gives `P(plaque)` in original face
 order. Do not treat the output as logits for a sigmoid, swap the two classes,
@@ -83,7 +91,7 @@ the public workflow calls this component the **3D branch**.
 
 ## How DentalPSAM uses it
 
-[features.py](features.py) runs the frozen checkpoint in evaluation mode and
+[features.py](features.py) runs the frozen checkpoint with its recorded normalization and
 uses UV metadata to place each original face into its image patch. Each
 exported row contains nine original triangle-coordinate values followed by
 one plaque probability. These `[N, 10]` rows are distinct from the 33-feature
@@ -122,7 +130,7 @@ targets), `SOTA_mesh/*.npz` (model-derived plaque probabilities),
 in original face order). Each NPZ contains `up/in/out` patch rows and their
 `face_order_up/in/out` arrays. Both NPZ files are reopened and checked against
 their own source values before the export is accepted. `export_manifest.json`
-records the checkpoint, source/input hashes, output hashes and verification.
+records the checkpoint path, normalization, mesh counts and export settings.
 
 For source compatibility, patch assignment retains upper-bound-only UV
 clipping and Python negative indexing. Auxiliary rasterization truncates

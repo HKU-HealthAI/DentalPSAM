@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import argparse
-import hashlib
 import json
 import platform
 import random
@@ -28,19 +27,6 @@ from dentalpsam.mesh_targets import (
 
 
 PREDICTION_THRESHOLD = 0.5
-
-
-def sha256_file(path: Path) -> str:
-    digest = hashlib.sha256()
-    with path.open("rb") as handle:
-        for block in iter(lambda: handle.read(1024 * 1024), b""):
-            digest.update(block)
-    return digest.hexdigest()
-
-
-def sha256_lines(values: list[str]) -> str:
-    payload = "".join(f"{value}\n" for value in values).encode("utf-8")
-    return hashlib.sha256(payload).hexdigest()
 
 
 def write_json(path: Path, payload: dict) -> None:
@@ -88,12 +74,8 @@ def inspect_patient_split(
         "participant_id_prefix_length": participant_prefix_length,
         "train_mesh_count": len(train_meshes),
         "train_participant_count": len(train_participants),
-        "train_mesh_ids_sha256": sha256_lines(train_meshes),
-        "train_participant_ids_sha256": sha256_lines(train_participants),
         "val_mesh_count": len(val_meshes),
         "val_participant_count": len(val_participants),
-        "val_mesh_ids_sha256": sha256_lines(val_meshes),
-        "val_participant_ids_sha256": sha256_lines(val_participants),
     }
 
 
@@ -237,11 +219,6 @@ def run_training(args) -> None:
         raise NotADirectoryError("Training and validation directories must exist.")
     if not sam_checkpoint.is_file():
         raise FileNotFoundError(sam_checkpoint)
-    provenance = getattr(args, "input_provenance", None)
-    if not isinstance(provenance, dict) or provenance.get("sam_sha256") != sha256_file(sam_checkpoint):
-        raise ValueError("Training requires verified input provenance; use train.py with --branch-checkpoint")
-    if provenance.get("mesh_fusion") != args.mesh_fusion:
-        raise ValueError("Training provenance does not match mesh_fusion")
 
     output_dir = prepare_output_directory(args.save_dir, (train_dir, val_dir))
     split_contract = inspect_patient_split(
@@ -254,13 +231,11 @@ def run_training(args) -> None:
         "schema_version": 1,
         "status": "started",
         "entry_point": Path(__file__).name,
-        "entry_point_sha256": sha256_file(Path(__file__).resolve()),
         "command": sys.argv,
         "train_dir": str(train_dir),
         "val_dir": str(val_dir),
         "sam_checkpoint": str(sam_checkpoint),
-        "sam_checkpoint_sha256": sha256_file(sam_checkpoint),
-        "input_provenance": provenance,
+        "branch_checkpoint": str(getattr(args, "branch_checkpoint", "")),
         "split_contract": split_contract,
         "epochs": args.epochs,
         "batch_size": args.batch_size,
@@ -359,7 +334,7 @@ def run_training(args) -> None:
                 "epoch": epoch,
                 "model_state_dict": model.state_dict(),
                 "validation_metrics": val_metrics,
-                "input_provenance": provenance,
+                "mesh_fusion": args.mesh_fusion,
             }
             if epoch % args.save_every == 0:
                 torch.save(checkpoint_payload, output_dir / f"checkpoint_epoch_{epoch:03d}.pth")

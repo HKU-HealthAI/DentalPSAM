@@ -1,17 +1,15 @@
 #!/usr/bin/env python3
-"""Audit prepared images and mesh patches before training or prediction.
+"""Check prepared images and mesh patches before training or prediction.
 
 The tool is intentionally dependency-free and read-only with respect to the
 input split.  It verifies the four directories required by the public data
 contract, checks the three-view naming convention, and produces a compact
-JSON manifest.  The manifest hashes mesh identifiers, not patient images or
-labels, so it can be stored beside an experiment without copying private data.
+summary. Patient images and labels are never modified.
 """
 
 from __future__ import annotations
 
 import argparse
-import hashlib
 import json
 import re
 from collections import defaultdict
@@ -55,17 +53,12 @@ def _read_labels(label_dir: Path) -> dict[str, dict[int, str]]:
     return dict(meshes)
 
 
-def _sha256_lines(lines: list[str]) -> str:
-    payload = ("\n".join(lines) + "\n").encode("utf-8")
-    return hashlib.sha256(payload).hexdigest()
-
-
 def inspect_split(data_dir: Path, participant_id_prefix_length: int | None = None) -> dict[str, Any]:
     """Validate one split and return a machine-readable manifest dictionary.
 
     ``participant_id_prefix_length`` is optional because participant IDs are a
-    study-specific convention.  When supplied, it is used only for a count and
-    a hashed list; the raw IDs are not copied into the manifest.
+    study-specific convention. When supplied, it is used only for a count;
+    raw participant identifiers are not included in the summary.
     """
     data_dir = data_dir.resolve()
     if not data_dir.is_dir():
@@ -122,7 +115,6 @@ def inspect_split(data_dir: Path, participant_id_prefix_length: int | None = Non
         "required_directories": list(REQUIRED_DIRS),
         "mesh_count": len(mesh_ids),
         "view_count": len(label_files),
-        "mesh_ids_sha256": _sha256_lines(mesh_ids),
         "file_counts": {
             "images_png": len(origin_files),
             "image_labels_png": len(label_files),
@@ -136,7 +128,6 @@ def inspect_split(data_dir: Path, participant_id_prefix_length: int | None = Non
             _fail("At least one mesh ID is shorter than participant_id_prefix_length.")
         manifest["participant_id_prefix_length"] = participant_id_prefix_length
         manifest["participant_count"] = len(participants)
-        manifest["participant_ids_sha256"] = _sha256_lines(participants)
     return manifest
 
 

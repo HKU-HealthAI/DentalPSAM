@@ -64,9 +64,10 @@ read, even when complete. New files are written under the result directory,
 never into the original dataset. Stage-2 training likewise requires an explicit
 3D checkpoint and regenerates its inputs. There is no public cache-reuse switch.
 
-The program checks that the model files and generated features match before
-running prediction. Keep all supplied weight files and `manifest.json` together;
-these checks require no additional commands.
+Use the three weight files supplied together, or from the same training run.
+The program strictly loads each model and checks generated labels, face order,
+and mesh membership before prediction. No additional model-information file
+is required.
 
 | Directory | File contract |
 | --- | --- |
@@ -103,7 +104,7 @@ participant-clustered confidence intervals. It is not area-weighted evaluation.
 | Message or symptom | What to check |
 | --- | --- |
 | Missing test list | Place the supplied `mesh_ids.txt` inside `data/test`. |
-| Missing model files | Obtain the complete weights directory, including `manifest.json`. |
+| Missing model files | Supply `dentalpsam.pth`, `branch3d.pth`, and `sam.pth`. |
 | Incompatible model files | Use the matching files supplied together, or the files from the same training run. |
 | Output already exists | Choose a new `--output` directory; previous results are not overwritten. |
 | Training and validation participants overlap | Correct the split assignment so every participant belongs to only one split. Do not drop cases based on performance. |

@@ -1,6 +1,9 @@
 __pycache__/
 *.py[cod]
 *.log
+*.json
+*.jsonl
+*.sha256
 *.pth
 *.pkl
 *.pt
@@ -27,8 +30,6 @@ __pycache__/
 credentials*
 secrets*
 data/
-!dev/commands/data/
-!dev/commands/data/prepare_views.py
 splits/
 Raw/
 derived/

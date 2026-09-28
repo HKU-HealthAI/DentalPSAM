@@ -199,11 +199,10 @@ def main() -> None:
             manifest["target_source"] == "label_ply_any_exact_black_vertex",
             "raw label-PLY target source was not recorded",
         )
-        require(manifest["schema_version"] == 4, "missing provenance schema version")
-        require(manifest["target_input"]["file_count"] == 12, "target provenance missed an input file")
-        require(manifest["prediction_inputs"]["perfect"]["file_count"] == 4, "prediction provenance missed an input file")
-        require(len(manifest["evaluator_sha256"]) == 64, "missing evaluator source hash")
-        require(len(manifest["output_files"]["per_patient_metrics"]) == 64, "missing output hash")
+        require(manifest["schema_version"] == 4, "missing result schema version")
+        require(manifest["target_input_count"] == 12, "target input count is wrong")
+        require(manifest["prediction_inputs"]["perfect"] == 4, "prediction count is wrong")
+        require(manifest["output_files"]["per_patient_metrics"] == "per_patient_metrics.csv", "wrong output filename")
 
         # A valid one-method run has no paired comparisons.  It must still
         # produce a header-only comparison CSV so the output manifest can bind
@@ -225,7 +224,7 @@ def main() -> None:
         require(one_method.returncode == 0, one_method.stderr)
         require(len(read_csv(one_method_output / "paired_sign_flip_tests.csv")) == 0, "single method has comparisons")
         one_method_manifest = json.loads((one_method_output / "evaluation_manifest.json").read_text())
-        require(len(one_method_manifest["output_files"]["paired_sign_flip_tests"]) == 64, "empty table was not hashed")
+        require(one_method_manifest["output_files"]["paired_sign_flip_tests"] == "paired_sign_flip_tests.csv", "empty table was not listed")
 
         # The historical evaluator used a strict final ``> 0.5`` relation.
         # Boundary values must not silently become positive under the canonical

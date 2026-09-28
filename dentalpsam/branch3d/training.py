@@ -17,7 +17,6 @@ import argparse
 import csv
 
 
-import hashlib
 
 
 import json
@@ -52,14 +51,6 @@ from torch.utils.data import DataLoader
 from dentalpsam.evaluation import equal_face_metrics
 
 PADDED_FACE_COUNT = 16_000
-
-
-def sha256(path: Path) -> str:
-    digest = hashlib.sha256()
-    with path.open("rb") as handle:
-        for block in iter(lambda: handle.read(1024 * 1024), b""):
-            digest.update(block)
-    return digest.hexdigest()
 
 
 def patient_id(mesh_name: str) -> str:
@@ -139,17 +130,6 @@ def assert_split_contract(train_names: list[str], val_names: list[str]) -> dict[
         "validation_patients": len(val_patients),
         "participant_overlap": overlap,
     }
-
-
-def load_model_state(checkpoint: Path, device: torch.device) -> dict[str, torch.Tensor]:
-    value = torch.load(checkpoint, map_location=device)
-    if isinstance(value, dict):
-        for key in ("model_state_dict", "state_dict", "model"):
-            if key in value and isinstance(value[key], dict):
-                return value[key]
-    if not isinstance(value, dict):
-        raise TypeError(f"Checkpoint does not contain a state dictionary: {checkpoint}")
-    return value
 
 
 def validation_metrics(
@@ -265,6 +245,7 @@ def run_training(args) -> None:
     )
     class_weight = torch.tensor([1.0, args.plaque_class_weight], device=device)
     configuration = {
+        "normalization": model.normalization,
         "loss": "per-face NLL, class axis last, padding excluded",
         "initialization": "random; no task checkpoint loaded",
         "selection_metric": "mesh_macro_plaque_iou",
@@ -357,6 +338,7 @@ def run_training(args) -> None:
     manifest = {
         "schema_version": 2,
         "method": "3D branch",
+        "normalization": model.normalization,
         "selection_metric": "validation mesh-macro equal-triangle plaque IoU",
         "selection_threshold": 0.5,
         "decision_rule": "score > 0.5",
@@ -378,21 +360,7 @@ def run_training(args) -> None:
         "split_contract": split_contract,
         "train_dir": str(args.train_dir),
         "validation_dir": str(args.val_dir),
-        "train_mesh_list_sha256": hashlib.sha256(
-            "\n".join(train_dataset.file_list).encode("utf-8")
-        ).hexdigest(),
-        "validation_mesh_list_sha256": hashlib.sha256(
-            "\n".join(val_dataset.file_list).encode("utf-8")
-        ).hexdigest(),
-        "source": {
-            "trainer": str(Path(__file__).resolve()),
-            "trainer_sha256": sha256(Path(__file__).resolve()),
-            "model_sha256": sha256(Path(__file__).parent / "model.py"),
-            "dataloader_sha256": sha256(Path(__file__).parent / "data.py"),
-            "utils_sha256": sha256(Path(__file__).parent / "utils.py"),
-        },
         "checkpoint": str(checkpoint),
-        "checkpoint_sha256": sha256(checkpoint),
     }
     (args.out_dir / "manifest.json").write_text(
         json.dumps(manifest, indent=2, sort_keys=True) + "\n",

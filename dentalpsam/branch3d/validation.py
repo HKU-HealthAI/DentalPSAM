@@ -19,13 +19,13 @@ import torch
 from torch.utils.data import DataLoader
 
 
-from dentalpsam.branch3d.training import MetadataCache, load_model_state, sha256, validation_metrics
+from dentalpsam.branch3d.training import MetadataCache, validation_metrics
 
 
 from dentalpsam.branch3d.data import PlyDataset
 
 
-from dentalpsam.branch3d.model import TSGCNet
+from dentalpsam.branch3d.checkpoints import load_branch3d
 
 
 def validate_checkpoint(args) -> None:
@@ -50,12 +50,12 @@ def validate_checkpoint(args) -> None:
     device = torch.device(args.device)
     if device.type == "cuda" and not torch.cuda.is_available():
         raise RuntimeError("A CUDA device was requested but CUDA is unavailable.")
-    model = TSGCNet(in_channels=9, output_channels=2, k=args.k).to(device)
-    model.load_state_dict(load_model_state(checkpoint, device), strict=True)
+    model = load_branch3d(checkpoint, device, k=args.k)
     metrics = validation_metrics(model, loader, metadata, device)
     payload = {
         "schema_version": 2,
-        "checkpoint_sha256": sha256(checkpoint),
+        "normalization": model.normalization,
+        "checkpoint": str(checkpoint),
         "threshold": 0.5,
         "decision_rule": "score > 0.5",
         "aggregation": "arithmetic mean of per-mesh metrics",

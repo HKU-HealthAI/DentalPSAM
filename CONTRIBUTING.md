@@ -1,55 +1,30 @@
-# Development and evidence workflow
+# Contributing
 
-Keep code changes, experiment inputs, and scientific conclusions independently
-traceable. Source organization does not by itself establish paper reproduction.
+Keep changes focused and explain their effect on training, inference, or evaluation.
+The maintained branch is `main`; preserve other contributors' work and avoid
+rewriting published history.
 
-## Git workflow
+## Checks
 
-1. Fetch and inspect `git status --short --branch` before making changes. Preserve
-   other contributors' work. Keep the maintained history on `main`; do not create
-   extra development branches for this repository cleanup.
-2. Make focused commits with concrete subjects, for example
-   `Preserve OpenCV rounding in probability maps` or
-   `Document the fixed-checkpoint testing protocol`. Use the body to record
-   the technical reason, experiment or test, and any remaining limitation.
-   Do not amend published history, force-push, or reset other people's changes.
-3. Run the relevant tests on the experiment server in the documented environment.
-   Record the exact source revision or source hashes with test evidence.
-4. Review `git diff --check` and the staged diff. Stage specific files or
-   explicitly reviewed directories rather than the entire workspace.
-5. Push coherent milestones to `main` and verify the remote commit. State which
-   checks passed for that exact revision and which remain pending; pushing a
-   candidate does not accept it. Check repository usability independently of
-   paper-result reproduction. A formal release tag additionally
-   requires author decisions on licensing and data/checkpoint availability.
+Run the unit tests and regression suite in the documented environment:
 
-Use repository-local Git identity and configuration. Credentials belong in
-the process environment or credential manager, never in remote URLs, files,
-commands, logs, or commits. Never commit passwords or personal access tokens.
+```bash
+pytest -q
+bash tests/run_checks.sh
+git diff --check
+```
 
-## What belongs in Git
+Add behavioral tests when changing labels, normalization, checkpoint loading,
+face ordering, padding, fusion, or metrics. The default evaluation uses equal
+triangle weights, strict `> 0.5` decisions, fixed 0.5/0.5 fusion, and per-mesh
+averaging. Keep participants separate across train, validation, and test.
 
-Commit source, unit tests, documentation, and paper figures. Keep experiment
-audits and verification reports outside the public repository. Do not commit patient data, mesh
-lists containing participant identifiers, checkpoints, saved predictions,
-environments, credentials, or per-patient results. Store those in a separate
-access-controlled experiment directory. `.gitignore` is a safeguard, not a
-replacement for staged-content review.
+## Repository contents
 
-## Results and changes to numerical behavior
+Commit source code, tests, documentation, and paper figures. Keep patient data,
+checkpoints, predictions, run logs, generated JSON reports, and private experiment
+records outside Git. Tests should create their temporary inputs at runtime.
+Never commit credentials or private storage paths.
 
-The default MICCAI evaluator uses **equal triangle weights**, strict `> 0.5`
-decisions, UV-centre truncation, fixed 0.5/0.5 fusion, and per-mesh averaging.
-Area-weighted evaluation is a separately named analysis. Never substitute its
-results or confidence intervals into the original paper's table.
-
-Any change to labels, split membership, normalization, checkpoint selection,
-fusion, sampling, or aggregation needs an explicit protocol note and regression
-test. Never filter cases by model performance. Do not claim reproduction until
-the fixed data, checkpoint, prediction artifacts, and evaluator jointly support
-the claim.
-
-Each experiment should record Git commit, clean/dirty status, command,
-environment, checkpoint hashes, split hash, evaluator hash, and output hashes.
-For an uncommitted test candidate, retain a source SHA-256 manifest and later
-check it against the committed tree. Keep original data read-only.
+Use concise commit messages that describe the change. Review staged files and
+push tested, coherent updates to `main`.

@@ -80,9 +80,9 @@ are outside the installed package.
 
 The weights directory contains `sam.pth` (SAM ViT-B initialization, originally
 `sam_vit_b_01ec64.pth`), `branch3d.pth` (the fixed 3D feature generator), and
-`dentalpsam.pth` (task-trained model weights), plus `manifest.json` with the
-model information. Keep these files together. Compatibility checks run
-automatically before input preparation; users do not need to configure them.
+`dentalpsam.pth` (task-trained model weights). Use the matching files supplied
+together, or from the same training run. Model loading is strict and restores
+the architecture and normalization recorded by the checkpoint.
 Testing generates fresh inputs with the selected 3D checkpoint.
 Only load checkpoint files from trusted sources.
 

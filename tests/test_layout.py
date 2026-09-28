@@ -70,6 +70,7 @@ def test_preflight_accepts_public_processed_names(tmp_path):
     legacy = inspect_split(historical, 4)
     for root in (public, public.parent):
         observed = inspect_split(root, 4)
-        assert observed["mesh_ids_sha256"] == legacy["mesh_ids_sha256"]
+        assert observed["mesh_count"] == legacy["mesh_count"]
+        assert observed["file_counts"] == legacy["file_counts"]
         assert observed["participant_count"] == 1
         assert observed["required_directories"] == ["images", "image_labels", "mesh_features", "mesh_labels"]

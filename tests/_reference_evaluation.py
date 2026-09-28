@@ -11,7 +11,6 @@ from __future__ import annotations
 
 import argparse
 import csv
-import hashlib
 import json
 import math
 from collections import defaultdict
@@ -19,7 +18,7 @@ from pathlib import Path
 import numpy as np
 import sys
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from dentalpsam.mesh_io import (PLY_SCALARS, sha256_file, sha256_lines, hash_named_files, read_ply_mesh, triangle_areas, canonical_triangles, view_to_mesh_face_indices)
+from dentalpsam.mesh_io import (PLY_SCALARS, read_ply_mesh, triangle_areas, canonical_triangles, view_to_mesh_face_indices)
 
 
 VIEW_NAMES = ("up", "in", "out")
@@ -546,9 +545,8 @@ def write_csv(
     """Write a table, including a header-only file for an empty valid table.
 
     A one-method evaluation has no paired comparisons.  It is still a complete
-    evaluation, so it must emit an empty, schema-defined comparison table that
-    can be hashed in the provenance manifest rather than failing after all mesh
-    metrics were already calculated.
+    evaluation, so it must emit an empty, schema-defined comparison table
+    instead of failing after all mesh metrics were already calculated.
     """
     if not rows and empty_fieldnames is None:
         return
@@ -764,19 +762,12 @@ def main() -> None:
         "vertex_definition": "incident-face mean score and incident-face-any target",
         "primary_method": args.primary_method,
         "methods": method_protocol,
-        "mesh_list_sha256": sha256_file(args.mesh_list),
-        "mesh_ids_sha256": sha256_lines(mesh_ids),
-        "patient_ids_sha256": sha256_lines(sorted(patients)),
-        "spec_json_sha256": sha256_file(args.spec_json),
-        "evaluator_sha256": sha256_file(Path(__file__).resolve()),
-        "target_input": hash_named_files(
-            target_input_files(args.data_dir, mesh_ids, args.target_source)
-        ),
+        "target_input_count": len(target_input_files(args.data_dir, mesh_ids, args.target_source)),
         "prediction_inputs": {
-            str(spec["name"]): hash_named_files(prediction_input_files(spec, mesh_ids))
+            str(spec["name"]): len(prediction_input_files(spec, mesh_ids))
             for spec in specs
         },
-        "output_files": {label: sha256_file(path) for label, path in output_files.items()},
+        "output_files": {label: path.name for label, path in output_files.items()},
     }
     (args.out_dir / "evaluation_manifest.json").write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n")
 

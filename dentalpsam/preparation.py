@@ -13,7 +13,6 @@ from __future__ import annotations
 import argparse
 
 
-import hashlib
 
 
 import json
@@ -29,14 +28,6 @@ import open3d as o3d
 
 
 from dentalpsam.uv_projection import render_single_mesh
-
-
-def sha256_file(path: Path) -> str:
-    digest = hashlib.sha256()
-    with path.open("rb") as handle:
-        for block in iter(lambda: handle.read(1024 * 1024), b""):
-            digest.update(block)
-    return digest.hexdigest()
 
 
 def read_mesh_ids(path: Path) -> list[str]:
@@ -80,7 +71,6 @@ def prepare_views(args) -> None:
     mesh_ids = read_mesh_ids(mesh_list)
     output_dir.mkdir(parents=True)
     cases: list[dict[str, object]] = []
-    inputs: list[tuple[str, Path]] = [("mesh_list", mesh_list)]
     for index, mesh_id in enumerate(mesh_ids, start=1):
         origin_path = origin_dir / f"{mesh_id}.ply"
         label_path = label_dir / f"{mesh_id}.ply"
@@ -110,19 +100,13 @@ def prepare_views(args) -> None:
             raise ValueError(
                 f"Projected faces ({projected_face_count}) do not cover PLY faces ({face_count}): {mesh_id}"
             )
-        inputs.extend(((f"origin/{mesh_id}.ply", origin_path), (f"label/{mesh_id}.ply", label_path)))
         cases.append({"mesh_id": mesh_id, "face_count": face_count})
         print(f"[{index}/{len(mesh_ids)}] {mesh_id}: {face_count} faces", flush=True)
 
-    input_digest = hashlib.sha256()
-    for logical_name, path in inputs:
-        input_digest.update(f"{logical_name}:{sha256_file(path)}\n".encode("utf-8"))
     manifest = {
         "schema_version": 1,
         "status": "completed",
         "mesh_count": len(mesh_ids),
-        "input_file_set_sha256": input_digest.hexdigest(),
-        "renderer_sha256": sha256_file(Path(__file__).parent / "uv_projection.py"),
         "raw_data_modified": False,
         "outputs": ["origin/*.png", "label/*.png", "info/*.npz"],
         "cases": cases,
