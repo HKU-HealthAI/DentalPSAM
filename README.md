@@ -15,7 +15,7 @@ Architecture shown in the MICCAI paper. The implementation guide is
 
 | Resource | Status |
 | --- | --- |
-| Code | Public research implementation; licensing review pending |
+| Code | Available |
 | Dataset | Coming soon |
 | Task checkpoints | Local weights directory: `checkpoints/` (see [Test](#test)) |
 
